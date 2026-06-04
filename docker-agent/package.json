@@ -9,7 +9,7 @@
     "dev": "ts-node src/index.ts",
     "mcp": "ts-node src/mcp.ts",
     "start": "node dist/mcp.js",
-    "typecheck": "tsc --project tsconfig.check.json",
+    "typecheck": "tsc --noEmit",
     "test": "jest --forceExit --detectOpenHandles",
     "lint": "biome check src/"
   },

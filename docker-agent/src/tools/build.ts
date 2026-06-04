@@ -1,7 +1,7 @@
-import { execFile } from 'child_process';
+﻿import { execFile } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { defineTool, z } from './define-tool';
+import { defineTool, z } from '@bk/agent-core';
 
 function execCmd(
   cmd: string,
@@ -43,10 +43,10 @@ export const buildDetect = defineTool({
       { file: 'pyproject.toml', language: 'Python', buildTool: 'build_python', notes: 'PEP 517/518' },
       { file: 'setup.py', language: 'Python', buildTool: 'build_python' },
       { file: 'requirements.txt', language: 'Python', buildTool: 'build_python' },
-      { file: 'Cargo.toml', language: 'Rust', buildTool: 'none — not yet supported' },
-      { file: 'pom.xml', language: 'Java', buildTool: 'none — not yet supported', notes: 'Maven' },
-      { file: 'build.gradle', language: 'Java', buildTool: 'none — not yet supported', notes: 'Gradle' },
-      { file: 'Makefile', language: 'generic', buildTool: 'none — run make manually via container_exec' },
+      { file: 'Cargo.toml', language: 'Rust', buildTool: 'none â€” not yet supported' },
+      { file: 'pom.xml', language: 'Java', buildTool: 'none â€” not yet supported', notes: 'Maven' },
+      { file: 'build.gradle', language: 'Java', buildTool: 'none â€” not yet supported', notes: 'Gradle' },
+      { file: 'Makefile', language: 'generic', buildTool: 'none â€” run make manually via container_exec' },
     ];
 
     const detected = checks.filter(c => existsSync(join(path, c.file)));
@@ -158,3 +158,4 @@ export const buildGo = defineTool({
     return execCmd('go', args, path, env);
   },
 });
+

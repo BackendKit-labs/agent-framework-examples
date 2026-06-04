@@ -1,4 +1,4 @@
-﻿import { defineTool, z } from './define-tool';
+﻿import { defineTool, z } from '@bk/agent-core';
 import { composeUp, composeDown, composeBuild, composeLogs, composePs } from '../docker/compose';
 
 export const composeTool = {
@@ -71,4 +71,5 @@ export const composeTool = {
     },
   }),
 };
+
 

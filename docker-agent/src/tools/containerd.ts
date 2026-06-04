@@ -1,5 +1,5 @@
 ﻿import { execFile } from 'child_process';
-import { defineTool, z } from './define-tool';
+import { defineTool, z } from '@bk/agent-core';
 import { loadConfig } from '../config';
 
 function execRuntime(args: string[], timeoutMs?: number): Promise<string> {
@@ -119,4 +119,5 @@ export const containerdPull = defineTool({
     return `Pulled: ${image}`;
   },
 });
+
 

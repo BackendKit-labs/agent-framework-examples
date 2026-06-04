@@ -1,5 +1,5 @@
 ﻿import { execFile } from 'child_process';
-import { defineTool, z } from './define-tool';
+import { defineTool, z } from '@bk/agent-core';
 import { getClient } from '../docker/client';
 import { loadConfig } from '../config';
 
@@ -212,4 +212,5 @@ export const networkDnsLookup = defineTool({
     }
   },
 });
+
 

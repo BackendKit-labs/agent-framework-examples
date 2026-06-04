@@ -1,4 +1,4 @@
-﻿import { defineTool, z } from './define-tool';
+﻿import { defineTool, z } from '@bk/agent-core';
 import { getClient } from '../docker/client';
 
 export const volumeCreate = defineTool({
@@ -78,4 +78,5 @@ export const volumeRemove = defineTool({
     return `Removed volume: ${volume}`;
   },
 });
+
 

@@ -1,5 +1,5 @@
-import { execFile, spawn } from 'child_process';
-import { defineTool, z } from './define-tool';
+﻿import { execFile, spawn } from 'child_process';
+import { defineTool, z } from '@bk/agent-core';
 import { loadConfig } from '../config';
 
 function execDocker(args: string[], timeoutMs?: number): Promise<string> {
@@ -42,14 +42,14 @@ function spawnDockerSecretCreate(name: string, value: string, labels: string[]):
   });
 }
 
-// ── Docker Swarm secrets ──────────────────────────────────────────────────────
+// â”€â”€ Docker Swarm secrets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const swarmSecretCreate = defineTool({
   name: 'swarm_secret_create',
   description: 'Create a Docker Swarm secret. Value is piped via stdin and never exposed in process arguments.',
   input: z.object({
     name: z.string().describe('Secret name (e.g. db_password, api_key)'),
-    value: z.string().describe('Secret value — passed via stdin, not logged'),
+    value: z.string().describe('Secret value â€” passed via stdin, not logged'),
     labels: z.array(z.string()).optional().describe('Labels (key=value) to attach to the secret'),
   }),
   async execute({ name, value, labels = [] }) {
@@ -60,7 +60,7 @@ export const swarmSecretCreate = defineTool({
 
 export const swarmSecretList = defineTool({
   name: 'swarm_secret_list',
-  description: 'List Docker Swarm secrets (names and metadata only — values are never accessible)',
+  description: 'List Docker Swarm secrets (names and metadata only â€” values are never accessible)',
   input: z.object({
     filter: z.string().optional().describe('Filter by name'),
   }),
@@ -78,7 +78,7 @@ export const swarmSecretList = defineTool({
 
 export const swarmSecretInspect = defineTool({
   name: 'swarm_secret_inspect',
-  description: 'Inspect a Docker Swarm secret (metadata only — Docker never exposes secret values)',
+  description: 'Inspect a Docker Swarm secret (metadata only â€” Docker never exposes secret values)',
   input: z.object({
     name: z.string().describe('Secret name or ID'),
   }),
@@ -112,7 +112,7 @@ export const swarmSecretRemove = defineTool({
   },
 });
 
-// ── HashiCorp Vault KV ────────────────────────────────────────────────────────
+// â”€â”€ HashiCorp Vault KV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const vaultKvRead = defineTool({
   name: 'vault_kv_read',
@@ -174,3 +174,4 @@ export const vaultKvDelete = defineTool({
     return JSON.stringify({ deleted: path, ...(versions ? { versions } : {}) });
   },
 });
+

@@ -1,6 +1,6 @@
-import { execFile } from 'child_process';
+﻿import { execFile } from 'child_process';
 import Docker from 'dockerode';
-import { defineTool, z } from './define-tool';
+import { defineTool, z } from '@bk/agent-core';
 import { getClient } from '../docker/client';
 import { ContainerNotFoundError } from '../errors';
 
@@ -225,3 +225,4 @@ export const eventsTail = defineTool({
     return JSON.stringify(events);
   },
 });
+

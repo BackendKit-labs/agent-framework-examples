@@ -3,7 +3,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
-import { defineTool, z } from './define-tool';
+import { defineTool, z } from '@bk/agent-core';
 import { loadConfig } from '../config';
 
 function kubectl(args: string[], timeoutMs?: number): Promise<string> {
@@ -156,4 +156,5 @@ export const k8sDelete = defineTool({
     return kubectl(args);
   },
 });
+
 
