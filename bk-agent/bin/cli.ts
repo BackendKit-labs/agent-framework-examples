@@ -15,10 +15,16 @@ import {
     SlashCommandRegistry,
     registerBuiltinCommands,
     getProjectDir,
+    loadWorkspaces,
+    saveWorkspaces,
+    importProject,
+    setActiveProject,
+    deriveProjectName,
     type AgentEvent,
     type AgentProfile,
     type IterationMode,
     type IterationStats,
+    type WorkspacesConfig,
 } from '@bk/agent-core';
 
 import { Terminal } from '../src/ui/terminal';
@@ -43,13 +49,11 @@ import { PathAllowlist } from '../src/skills/handlers/path-allowlist';
 import { defaultInstructions } from '../src/types/config';
 import { loadSkills, loadVaultSkills, type Skill, type VaultSkill } from '../src/skills/loader';
 import {
-    listWorkspaces, ensureWorkspace, readWorkspaceMemory, DEFAULT_WORKSPACE,
     listCheckpoints, readCheckpoint, createCheckpoint, compactSession,
-    type WorkspaceInfo,
 } from '../src/memory/updater';
 import {
-    loadMemoryContext, getProjectMemoryDir, listLocalProjects, getGlobalAgentsDir, getGlobalSkillsDir,
-    type MemoryContext,
+    loadMemoryContext, listLocalProjects, getGlobalAgentsDir, getGlobalSkillsDir,
+    getProjectMemoryDir, type MemoryContext,
 } from '../src/bootstrap/memory-loader';
 
 registerNestJSHandlers();
@@ -105,12 +109,13 @@ function buildHelpText(skills: Skill[]): string {
         chalk.cyan('/usage') + '                 Tokens y costo de sub-agentes',
         chalk.cyan('/status') + '                Panel de estado del sistema',
         chalk.cyan('/agent [id]') + '            Cambiar agente activo',
-        chalk.cyan('/agents') + '                Lista de agentes disponibles',
+
         chalk.cyan('/models [id]') + '           Cambiar modelo de IA',
         chalk.cyan('/skills') + '               Ver/instalar skills',
         chalk.cyan('/iteration') + '             Ver/cambiar modo de iteracion',
         chalk.cyan('/memory') + '               Ver memoria del proyecto activo',
-        chalk.cyan('/switch [ws]') + '           Cambiar workspace del proyecto',
+        chalk.cyan('/switch [ws] [proj]') + '     Cambiar workspace/proyecto activo (picker TUI)',
+        chalk.cyan('/workspace [sub]') + '       Gestionar workspaces (create/add/remove/delete)',
         chalk.cyan('/checkpoint <nombre>') + '   Crear checkpoint de sesion',
         chalk.cyan('/checkpoint list') + '       Listar checkpoints',
         chalk.cyan('/checkpoint load <n>') + '   Cargar checkpoint',
@@ -200,7 +205,11 @@ program
         let allowAll = false;
         let pendingInput: string | null = null;
         let pendingContext: string | null = null;
-        let activeWorkspace = DEFAULT_WORKSPACE;
+
+        // Workspace B+ state
+        let activeWorkspaceName: string | null = null;
+        let activeAppPath: string = cwd;
+        const rootCtx = { current: cwd };  // mutable projectRoot for builtin handlers
 
         const sessionStats = { calls: 0, inputTokens: 0, outputTokens: 0 };
         const liveMetrics: SpinnerMetrics = {
@@ -221,10 +230,11 @@ program
         let vaultConnected = false;
         let projectName = path.basename(cwd);
 
-        // Try loading memory from local ~/.deepseek-code/projects/
-        const localMemoryDir = getProjectMemoryDir(cwd);
-        let memoryContext: MemoryContext | null = await loadMemoryContext(vaultPath, localMemoryDir, projectName);
-        const projectBaseDir = memoryContext ? path.dirname(memoryContext.projectDir) : undefined;
+        // Load memory from the current active app path (starts as cwd)
+        const loadAppMemory = async (appPath: string): Promise<MemoryContext | null> => {
+            return loadMemoryContext(vaultPath, getProjectMemoryDir(appPath), path.basename(appPath));
+        };
+        let memoryContext: MemoryContext | null = await loadAppMemory(cwd);
 
         // ── Skills ────────────────────────────────────────────────────────────
         const skillsDir = getGlobalSkillsDir();
@@ -242,6 +252,9 @@ program
 
         const buildHeaderInfo = (): HeaderInfo => {
             const cur = allAgents.find(a => a.id === currentAgentId);
+            const wsLabel = activeWorkspaceName
+                ? `${activeWorkspaceName} · ${path.basename(activeAppPath)}`
+                : undefined;
             return {
                 model: currentModel,
                 vaultConnected,
@@ -249,7 +262,7 @@ program
                 projectName,
                 memoryProject: memoryContext?.activeProject,
                 memorySource: memoryContext?.source,
-                activeWorkspace,
+                activeWorkspace: wsLabel,
                 agentIcon: cur?.icon,
                 agentName: cur?.name,
                 skillsCount: allSkills.length,
@@ -639,16 +652,6 @@ program
             emit(`Agente cambiado a: ${profile.icon} ${profile.name} · historial reseteado`);
         });
 
-        cmdRegistry.register('/agents', 'Lista agentes disponibles', async ({ rawInput, emit }) => {
-            agentEvents.emit({ type: 'user_message', text: rawInput } as any);
-            const lines = ['Agentes disponibles:\n'];
-            for (const a of allAgents) {
-                const mark = a.id === currentAgentId ? ' <- activo' : '';
-                lines.push(`  ${a.icon} ${a.id.padEnd(18)} ${a.name}${mark}`);
-            }
-            emit(lines.join('\n'));
-        });
-
         cmdRegistry.register('/models', 'Lista o cambia el modelo de IA', async ({ rawInput, args, emit }) => {
             agentEvents.emit({ type: 'user_message', text: rawInput } as any);
             if (!args) {
@@ -749,25 +752,24 @@ program
 
         // ── Headless mode ─────────────────────────────────────────────────────
         if (agentEvents.isHeadless()) {
+            const headlessAllowlist = new PathAllowlist({
+                allowedPaths: [cwd, vaultPath, (await import('os')).tmpdir()].filter(Boolean),
+                allowSubpaths: true,
+            });
             registerBuiltinHandlers({
                 vaultPath,
                 instructions: defaultInstructions(),
                 askConfirmation: async () => true,
-                projectRoot: cwd,
+                get projectRoot() { return rootCtx.current; },
                 memoryContext,
                 onMemoryUpdate: null,
-                pathAllowlist: new PathAllowlist({
-                    allowedPaths: [cwd, vaultPath, (await import('os')).tmpdir()].filter(Boolean),
-                    allowSubpaths: true,
-                }),
+                pathAllowlist: headlessAllowlist,
             });
 
             agentEvents.emit({ type: 'ready' });
 
             const emitConfig = async () => {
-                const workspaceList = projectBaseDir
-                    ? (await listWorkspaces(projectBaseDir)).map((w: WorkspaceInfo) => w.name)
-                    : ['default'];
+                const wsConfig = await loadWorkspaces('bk-agent');
                 agentEvents.emit({
                     type: 'config',
                     agents: allAgents.map(a => ({ id: a.id, name: a.name, icon: a.icon ?? 'robot', description: a.description ?? '' })),
@@ -776,30 +778,41 @@ program
                     currentAgent: currentAgentId,
                     currentModel,
                     skillsCount: allSkills.length,
-                    activeWorkspace,
-                    workspaces: workspaceList,
+                    activeWorkspace: activeWorkspaceName,
+                    activeApp: activeAppPath,
+                    workspaces: Object.entries(wsConfig).map(([name, entry]) => ({
+                        name,
+                        projects: entry.projects,
+                        activeProject: entry.active,
+                    })),
                 } as any);
             };
             await emitConfig();
 
-            // Headless /switch override
-            cmdRegistry.register('/switch', 'Cambiar workspace del proyecto', async ({ args, emit, injectContext }) => {
-                if (!projectBaseDir) { emit('Sin memoria activa.'); return; }
-                if (!args || args === 'list') {
-                    const workspaces = await listWorkspaces(projectBaseDir);
-                    emit(workspaces.map((w: WorkspaceInfo, i: number) =>
-                        `  ${i + 1}. ${w.name}${w.isDefault ? ' (default)' : ''}${w.name === activeWorkspace ? '  <- actual' : ''}`,
-                    ).join('\n'));
-                    return;
+            // Called by /workspace switch and /switch when the active project changes
+            const headlessOnCwdChange = async (newCwd: string): Promise<void> => {
+                rootCtx.current = newCwd;
+                activeAppPath = newCwd;
+                headlessAllowlist.addPath(newCwd);
+                engine.updateWorkingDir(newCwd);
+                const wsConfig = await loadWorkspaces('bk-agent');
+                for (const [wsName, wsEntry] of Object.entries(wsConfig)) {
+                    if (wsEntry.projects.some(p => p.cwd === newCwd)) { activeWorkspaceName = wsName; break; }
                 }
-                const workspace = await ensureWorkspace(projectBaseDir, args);
-                const { sessionContent, projectContext } = await readWorkspaceMemory(projectBaseDir, args);
-                memoryContext = { ...memoryContext!, memoryDir: workspace.memoryDir, projectDir: workspace.memoryDir, sessionContent, projectContext };
-                activeWorkspace = args;
-                injectContext?.(`## Workspace: ${args}\n\n${sessionContent || '*(empty)*'}`);
-                pendingContext = `## Workspace: ${args}\n\n${sessionContent || '*(empty)*'}`;
+                memoryContext = await loadAppMemory(newCwd);
+                projectName = path.basename(newCwd);
+                pendingContext = `## Workspace: ${activeWorkspaceName ?? 'default'} | Project: ${projectName}\n\n${memoryContext?.sessionContent || '*(empty)*'}`;
                 await emitConfig();
-                emit(`Workspace: ${args}\n${workspace.memoryDir}`);
+            };
+
+            // Headless /switch — delegates to framework /workspace switch with onCwdChange
+            cmdRegistry.register('/switch', 'Cambiar workspace/proyecto activo', async (ctx) => {
+                const target = ctx.args.trim();
+                await cmdRegistry.dispatch(
+                    target ? `/workspace switch ${target}` : '/workspace switch',
+                    { ...ctx, appName: 'bk-agent', onCwdChange: headlessOnCwdChange, injectContext: (m) => { pendingContext = m; } },
+                );
+                await emitConfig();
             });
 
             const { createInterface } = await import('readline');
@@ -831,6 +844,8 @@ program
                                 projectDir: memoryContext?.projectDir,
                                 sessionContent: memoryContext?.sessionContent ?? '',
                                 injectContext: (ctxMsg: string) => { pendingContext = ctxMsg; },
+                                appName: 'bk-agent',
+                                onCwdChange: headlessOnCwdChange,
                             });
                             if (handled) return;
                             agentEvents.emit({ type: 'user_message', text } as any);
@@ -858,6 +873,12 @@ program
         }
 
         // ── Terminal (TUI) overrides ──────────────────────────────────────────
+
+        // Mutable allowlist for TUI mode — addPath() called on workspace/app switch
+        const tuiAllowlist = new PathAllowlist({
+            allowedPaths: [cwd, vaultPath, (await import('os')).tmpdir()].filter(Boolean),
+            allowSubpaths: true,
+        });
 
         const showHeader = () => {
             console.clear();
@@ -1042,16 +1063,6 @@ program
             console.log(formatCommandOutput(chalk.green(`✓ Agente: ${profile.icon} ${profile.name}`) + (reset ? chalk.dim('  · historial reseteado') : '')));
         });
 
-        cmdRegistry.register('/agents', 'Lista agentes disponibles', async () => {
-            const lines = ['Agentes disponibles:\n'];
-            for (const a of allAgents) {
-                const mark = a.id === currentAgentId ? chalk.green(' <- activo') : '';
-                lines.push(`  ${a.icon} ${a.id.padEnd(18)} ${chalk.bold(a.name)}${mark}`);
-                if (a.description) lines.push(`    ${chalk.dim(a.description)}`);
-            }
-            console.log(formatCommandOutput(lines.join('\n')));
-        });
-
         cmdRegistry.register('/models', 'Lista o cambia el modelo de IA', async () => {
             if (running) { console.log(formatCommandOutput(chalk.yellow('Agente ocupado — espera antes de cambiar modelo.'))); return; }
             const menuItems = DEEPSEEK_MODELS.map(m => {
@@ -1102,7 +1113,7 @@ program
                 console.log(formatCommandOutput(chalk.cyan('  · prompt.md encontrado — usado como contexto inicial')));
             } catch { }
             const isExisting = found.length > 0;
-            const workspaceCtx = activeWorkspace !== DEFAULT_WORKSPACE ? ` Workspace activo: ${activeWorkspace}.` : '';
+            const workspaceCtx = activeWorkspaceName ? ` Workspace activo: ${activeWorkspaceName} | App: ${path.basename(activeAppPath)}.` : '';
             const baseMsg = isExisting
                 ? `[/init] Proyecto existente (${found.join(', ')}).${workspaceCtx} Analiza, identifica gaps y actualiza especificacion y diseno.`
                 : `[/init] Proyecto nuevo.${workspaceCtx} Inicia el flujo de levantamiento: 4 preguntas requeridas antes de crear documentos.`;
@@ -1125,29 +1136,122 @@ program
             await runEngine(`Genera un prompt para: ${phrase}\n\nEscribe el prompt final en prompt.md usando write_file.`);
         });
 
-        cmdRegistry.register('/switch', 'Cambiar workspace del proyecto', async ({ args }) => {
-            if (!projectBaseDir) { console.log(formatCommandOutput(chalk.yellow('Sin memoria activa.'))); return; }
+        // Called by /workspace switch (framework) and /switch (TUI alias) when project changes
+        const tuiOnCwdChange = async (newCwd: string): Promise<void> => {
+            rootCtx.current = newCwd;
+            activeAppPath = newCwd;
+            tuiAllowlist.addPath(newCwd);
+            engine.updateWorkingDir(newCwd);
+            const wsConfig = await loadWorkspaces('bk-agent');
+            for (const [wsName, wsEntry] of Object.entries(wsConfig)) {
+                if (wsEntry.projects.some(p => p.cwd === newCwd)) { activeWorkspaceName = wsName; break; }
+            }
+            memoryContext = await loadAppMemory(newCwd);
+            projectName = path.basename(newCwd);
+            pendingContext = `## Workspace: ${activeWorkspaceName ?? 'default'} | Project: ${projectName}\n\n${memoryContext?.sessionContent || '*(empty)*'}`;
+            updateHeaderCallback();
+        };
+
+        cmdRegistry.register('/switch', 'Cambiar workspace/proyecto activo (picker TUI)', async ({ args }) => {
             if (running) { console.log(formatCommandOutput(chalk.yellow('Agente ocupado — espera antes de cambiar workspace.'))); return; }
-            let chosenName: string | null = args || null;
-            if (!chosenName) {
-                const workspaces = await listWorkspaces(projectBaseDir);
-                const items = workspaces.map((w: WorkspaceInfo) => ({
-                    label: (w.name === activeWorkspace ? chalk.green('✓ ') : '  ') + (w.isDefault ? chalk.dim(w.name) : chalk.cyan(w.name)),
-                    value: w.name,
+
+            // /switch <wsName> [projectName] — directo sin picker
+            if (args) {
+                await cmdRegistry.dispatch(`/workspace switch ${args}`, {
+                    emit: (t) => console.log(formatCommandOutput(t)),
+                    appName: 'bk-agent',
+                    onCwdChange: tuiOnCwdChange,
+                    injectContext: (m) => { pendingContext = m; },
+                    effectiveAgentId: currentAgentId,
+                    model: currentModel,
+                });
+                return;
+            }
+
+            // Sin args: picker TUI de dos niveles (workspace → proyecto)
+            const wsConfig = await loadWorkspaces('bk-agent');
+            const wsNames = Object.keys(wsConfig);
+
+            if (!wsNames.length) {
+                console.log(formatCommandOutput(
+                    chalk.dim('Sin workspaces configurados.') + '\n' +
+                    chalk.dim('  /workspace import <ruta> [nombre]  — importar proyecto actual\n') +
+                    chalk.dim('  /workspace create <nombre>         — crear workspace vacío'),
+                ));
+                return;
+            }
+
+            // Nivel 1: elegir workspace
+            const wsItems = wsNames.map(n => {
+                const ws = wsConfig[n]!;
+                const count = ws.projects.length;
+                const active = n === activeWorkspaceName ? chalk.green('✓ ') : '  ';
+                return {
+                    label: active + chalk.cyan(n) + chalk.dim(`  (${count} proyecto${count !== 1 ? 's' : ''})`),
+                    value: n,
+                };
+            });
+            const chosenWs = await terminal.filteredSelect(
+                `Workspaces  ${chalk.dim('(actual: ' + (activeWorkspaceName ?? 'ninguno') + ')')}`,
+                wsItems,
+                [{ label: chalk.dim('+ Nuevo workspace…'), value: '__new__' }],
+            );
+
+            if (!chosenWs) { console.log(formatCommandOutput(chalk.dim('Cancelado'))); return; }
+
+            // "Nuevo workspace" inline
+            if (chosenWs === '__new__') {
+                const wsName = await terminal.input('Nombre del workspace:');
+                if (!wsName) { console.log(formatCommandOutput(chalk.dim('Cancelado'))); return; }
+                const rawCwd = await terminal.input(`Ruta del proyecto (Enter = ${cwd}):`);
+                const projectCwd = rawCwd ? path.resolve(rawCwd) : cwd;
+                const projectName = deriveProjectName(projectCwd);
+                const updated = importProject(wsConfig, wsName, { name: projectName, cwd: projectCwd });
+                await saveWorkspaces('bk-agent', updated);
+                await tuiOnCwdChange(projectCwd);
+                console.log(formatCommandOutput(chalk.green(`✓ Workspace creado: ${wsName} | ${projectName}`) + '\n' + chalk.dim(`  ${projectCwd}`)));
+                return;
+            }
+
+            // Nivel 2: elegir proyecto dentro del workspace
+            const ws = wsConfig[chosenWs]!;
+            let chosenCwd: string | null = null;
+
+            if (ws.projects.length === 1) {
+                chosenCwd = ws.projects[0]!.cwd;
+            } else {
+                const projItems = ws.projects.map(p => ({
+                    label: (p.cwd === activeAppPath ? chalk.green('✓ ') : '  ') +
+                           chalk.bold(p.name) + chalk.dim(`  ${p.cwd}`),
+                    value: p.cwd,
                 }));
-                chosenName = await terminal.filteredSelect(`Workspaces  ${chalk.dim('(actual: ' + activeWorkspace + ')')}`, items, [{ label: chalk.dim('+ Nuevo workspace…'), value: '__new__' }]);
-                if (chosenName === '__new__') {
-                    chosenName = await terminal.input('Nombre del workspace:');
+                const picked = await terminal.filteredSelect(
+                    `Proyectos en ${chosenWs}`,
+                    projItems,
+                    [{ label: chalk.dim('+ Añadir proyecto…'), value: '__add__' }],
+                );
+                if (!picked) { console.log(formatCommandOutput(chalk.dim('Cancelado'))); return; }
+                if (picked === '__add__') {
+                    const rawCwd = await terminal.input('Ruta del proyecto:');
+                    if (!rawCwd) { console.log(formatCommandOutput(chalk.dim('Cancelado'))); return; }
+                    chosenCwd = path.resolve(rawCwd);
+                    const pName = deriveProjectName(chosenCwd);
+                    const updated = importProject(wsConfig, chosenWs, { name: pName, cwd: chosenCwd });
+                    await saveWorkspaces('bk-agent', updated);
+                } else {
+                    chosenCwd = picked;
                 }
             }
-            if (!chosenName) { console.log(formatCommandOutput(chalk.dim('Cancelado'))); return; }
-            const workspace = await ensureWorkspace(projectBaseDir, chosenName);
-            const { sessionContent, projectContext } = await readWorkspaceMemory(projectBaseDir, chosenName);
-            memoryContext = { ...memoryContext!, memoryDir: workspace.memoryDir, projectDir: workspace.memoryDir, sessionContent, projectContext };
-            activeWorkspace = chosenName;
-            pendingContext = `## Workspace: ${chosenName}\n\n${sessionContent || '*(empty)*'}`;
-            updateHeaderCallback();
-            console.log(formatCommandOutput(chalk.green(`✓ Workspace: ${chosenName}`) + '\n' + chalk.dim(`  ${workspace.memoryDir}`) + (sessionContent ? '' : '\n' + chalk.dim('  (memoria vacia — workspace nuevo)'))));
+
+            if (!chosenCwd) return;
+            const updated = setActiveProject(wsConfig, chosenWs, ws.projects.find(p => p.cwd === chosenCwd)?.name ?? '');
+            await saveWorkspaces('bk-agent', updated);
+            await tuiOnCwdChange(chosenCwd);
+            console.log(formatCommandOutput(
+                chalk.green(`✓ Workspace: ${chosenWs} | ${path.basename(chosenCwd)}`) + '\n' +
+                chalk.dim(`  ${chosenCwd}`) +
+                (!memoryContext?.sessionContent ? '\n' + chalk.dim('  (memoria vacía — proyecto nuevo)') : ''),
+            ));
         });
 
         cmdRegistry.register('/checkpoint', 'Crear / listar / cargar checkpoints de sesion', async ({ args }) => {
@@ -1219,6 +1323,14 @@ program
                         projectDir: memoryContext?.projectDir,
                         sessionContent: memoryContext?.sessionContent ?? '',
                         injectContext: (msg: string) => { pendingContext = msg; },
+                        appName: 'bk-agent',
+                        onCwdChange: tuiOnCwdChange,
+                        prompt: async (question, options) => {
+                            if (options?.length) return terminal.select(question, options.map(o => ({ label: o.label, value: o.value })));
+                            return terminal.input(question);
+                        },
+                        setIterationMode: (mode) => engine.setIterationMode(mode),
+                        getIterationMode: () => engine.getIterationMode(),
                     });
                     if (handled) return;
                     console.log(formatCommandOutput(chalk.yellow(`Comando desconocido: ${trimmed.split(' ')[0]}`)));
@@ -1259,13 +1371,10 @@ program
                 if (result === 'all') allowAll = true;
                 return result !== 'no';
             },
-            projectRoot: cwd,
+            get projectRoot() { return rootCtx.current; },
             memoryContext,
             onMemoryUpdate: null,
-            pathAllowlist: new PathAllowlist({
-                allowedPaths: [cwd, vaultPath, (await import('os')).tmpdir()].filter(Boolean),
-                allowSubpaths: true,
-            }),
+            pathAllowlist: tuiAllowlist,
         });
 
         // Header redraw callback
