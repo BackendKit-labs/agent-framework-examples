@@ -1,4 +1,4 @@
-import { CallbackTransport } from '@bk/agent-core';
+import { CallbackTransport } from '@backendkit-labs/agent-core';
 import { createInfraEngine } from './engine';
 import { loadConfig } from './config';
 

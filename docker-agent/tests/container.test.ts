@@ -2,7 +2,7 @@ import { GenericContainer, Wait, StartedTestContainer } from 'testcontainers';
 import Docker from 'dockerode';
 import { getClient, resetClient } from '../src/docker/client';
 import { containerCreate, containerExec, containerStop, containerRemove, containerLogs, containerInspect } from '../src/tools/container';
-import type { ExecutionContext } from '@bk/agent-core';
+import type { ExecutionContext } from '@backendkit-labs/agent-core';
 
 let dind: StartedTestContainer;
 let dockerHost: string;

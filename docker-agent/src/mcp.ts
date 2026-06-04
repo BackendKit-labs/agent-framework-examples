@@ -3,7 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
-import { CallbackTransport } from '@bk/agent-core';
+import { CallbackTransport } from '@backendkit-labs/agent-core';
 import { z } from 'zod';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

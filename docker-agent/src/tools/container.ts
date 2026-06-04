@@ -1,5 +1,5 @@
 import stream from 'stream';
-import type { ToolDefinition, ExecutionContext } from '@bk/agent-core';
+import type { ToolDefinition, ExecutionContext } from '@backendkit-labs/agent-core';
 import { getClient } from '../docker/client';
 import {
   ContainerNotFoundError,

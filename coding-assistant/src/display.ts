@@ -1,4 +1,4 @@
-import type { AgentEvent } from '@bk/agent-core';
+import type { AgentEvent } from '@backendkit-labs/agent-core';
 
 // ── ANSI ──────────────────────────────────────────────────────────────────────
 const c = {

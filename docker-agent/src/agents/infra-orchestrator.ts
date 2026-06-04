@@ -1,4 +1,4 @@
-import type { AgentProfile } from '@bk/agent-core';
+import type { AgentProfile } from '@backendkit-labs/agent-core';
 
 export const INFRA_ORCHESTRATOR_PROFILE: AgentProfile = {
   id: 'infra-orchestrator',

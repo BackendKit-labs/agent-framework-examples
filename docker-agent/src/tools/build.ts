@@ -1,7 +1,7 @@
-﻿import { execFile } from 'child_process';
+import { execFile } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { defineTool, z } from '@bk/agent-core';
+import { defineTool, z } from '@backendkit-labs/agent-core';
 
 function execCmd(
   cmd: string,

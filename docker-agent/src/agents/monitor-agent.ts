@@ -1,4 +1,4 @@
-import type { AgentProfile } from '@bk/agent-core';
+import type { AgentProfile } from '@backendkit-labs/agent-core';
 
 export const MONITOR_AGENT_PROFILE: AgentProfile = {
   id: 'monitor-agent',

@@ -4,7 +4,7 @@ import {
   ToolRegistry,
   ProviderRegistry,
   CallbackTransport,
-} from '@bk/agent-core';
+} from '@backendkit-labs/agent-core';
 import { OpenAICompatibleProvider } from './providers/openai-compatible';
 import { loadConfig } from './config';
 

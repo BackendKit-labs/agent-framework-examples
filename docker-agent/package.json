@@ -1,5 +1,5 @@
 {
-  "name": "@bk/infra-agent",
+  "name": "@backendkit-labs/infra-agent",
   "version": "0.2.0",
   "private": true,
   "description": "Infrastructure Agent — Docker, Compose, Swarm, Volumes, Containerd, Kubernetes",
@@ -14,7 +14,7 @@
     "lint": "biome check src/"
   },
   "dependencies": {
-    "@bk/agent-core": "file:../../agent-framework/packages/core",
+    "@backendkit-labs/agent-core": "file:../../agent-framework/packages/core",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "dockerode": "^4.0.4",
     "dotenv": "^16.4.7",

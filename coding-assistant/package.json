@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@bk/agent-coding": "file:../../agent-framework/packages/coding",
-    "@bk/agent-core": "file:../../agent-framework/packages/core"
+    "@backendkit-labs/agent-coding": "file:../../agent-framework/packages/coding",
+    "@backendkit-labs/agent-core": "file:../../agent-framework/packages/core"
   },
   "devDependencies": {
     "@types/node": "^20.19.41",

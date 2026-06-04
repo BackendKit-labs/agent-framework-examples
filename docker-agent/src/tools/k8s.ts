@@ -1,9 +1,9 @@
-﻿import { execFile } from 'child_process';
+import { execFile } from 'child_process';
 import { writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
-import { defineTool, z } from '@bk/agent-core';
+import { defineTool, z } from '@backendkit-labs/agent-core';
 import { loadConfig } from '../config';
 
 function kubectl(args: string[], timeoutMs?: number): Promise<string> {

@@ -2,7 +2,7 @@ import { loadConfig } from './config';
 import { getClient, resetClient } from './docker/client';
 import { containerCreate, containerExec, containerStop, containerRemove, containerLogs, containerInspect } from './tools/container';
 import { systemInfo, systemPrune } from './tools/system';
-import type { ExecutionContext } from '@bk/agent-core';
+import type { ExecutionContext } from '@backendkit-labs/agent-core';
 
 const ctx: ExecutionContext = {
   agentId: 'docker-agent',

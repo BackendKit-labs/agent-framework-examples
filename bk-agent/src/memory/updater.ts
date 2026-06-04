@@ -2,11 +2,11 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { MemoryContext } from '../bootstrap/memory-loader';
 import { readFileSafeAsync, writeFileSafeAsync } from '../shared/utils/encoding';
-import { createCheckpoint, listCheckpoints, readCheckpoint, compactSession, compactSessionContent, CheckpointSummary } from '@bk/agent-core';
+import { createCheckpoint, listCheckpoints, readCheckpoint, compactSession, compactSessionContent, CheckpointSummary } from '@backendkit-labs/agent-core';
 export { createCheckpoint, listCheckpoints, readCheckpoint, compactSession };
 export type { CheckpointSummary };
 
-// ── Workspace helpers (previously in @bk/agent-core, now local) ───────────────
+// ── Workspace helpers (previously in @backendkit-labs/agent-core, now local) ───────────────
 
 export const DEFAULT_WORKSPACE = 'default';
 
@@ -139,7 +139,7 @@ export async function switchProject(
     };
 }
 
-// Checkpoint functions are provided by @bk/agent-core (re-exported above)
+// Checkpoint functions are provided by @backendkit-labs/agent-core (re-exported above)
 
 // ── Project context update ────────────────────────────────────────────────────
 
@@ -270,7 +270,7 @@ export async function updateEngineInsights(
     return `✅ Insights del engine actualizados: ${insights.length} patrones`;
 }
 
-// compactSessionContent is imported from @bk/agent-core above
+// compactSessionContent is imported from @backendkit-labs/agent-core above
 
 // ── Session memory update ──────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import type { ToolDefinition, ExecutionContext } from '@bk/agent-core';
+import type { ToolDefinition, ExecutionContext } from '@backendkit-labs/agent-core';
 import { getClient } from '../docker/client';
 
 export const systemInfo: ToolDefinition = {

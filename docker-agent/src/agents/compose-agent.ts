@@ -1,4 +1,4 @@
-import type { AgentProfile } from '@bk/agent-core';
+import type { AgentProfile } from '@backendkit-labs/agent-core';
 
 export const COMPOSE_AGENT_PROFILE: AgentProfile = {
   id: 'compose-agent',

@@ -1,4 +1,4 @@
-import type { AgentProfile } from '@bk/agent-core';
+import type { AgentProfile } from '@backendkit-labs/agent-core';
 
 export const K8S_AGENT_PROFILE: AgentProfile = {
   id: 'k8s-agent',

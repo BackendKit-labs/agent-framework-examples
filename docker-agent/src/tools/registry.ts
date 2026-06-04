@@ -1,8 +1,8 @@
-﻿import { execFile, spawn } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import { defineTool, z } from '@bk/agent-core';
+import { defineTool, z } from '@backendkit-labs/agent-core';
 import { loadConfig } from '../config';
 
 function execDocker(args: string[], timeoutMs?: number): Promise<string> {

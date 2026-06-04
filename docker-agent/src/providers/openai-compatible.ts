@@ -1,8 +1,8 @@
-// TODO: Replace with OpenAICompatibleProvider from '@bk/agent-coding' once that
+// TODO: Replace with OpenAICompatibleProvider from '@backendkit-labs/agent-coding' once that
 // package exports a provider that doesn't pull in the full coding-agent toolset,
-// or once @bk/agent-core includes a built-in provider. See framework issue #providers.
+// or once @backendkit-labs/agent-core includes a built-in provider. See framework issue #providers.
 import OpenAI from 'openai';
-import type { LLMProvider, LLMMessage, LLMStreamCallbacks, ToolDefinition } from '@bk/agent-core';
+import type { LLMProvider, LLMMessage, LLMStreamCallbacks, ToolDefinition } from '@backendkit-labs/agent-core';
 
 export interface OpenAICompatibleProviderOptions {
   apiKey: string;

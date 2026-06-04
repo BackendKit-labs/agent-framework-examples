@@ -1,6 +1,6 @@
-﻿import { execFile } from 'child_process';
+import { execFile } from 'child_process';
 import Docker from 'dockerode';
-import { defineTool, z } from '@bk/agent-core';
+import { defineTool, z } from '@backendkit-labs/agent-core';
 import { getClient } from '../docker/client';
 import { ContainerNotFoundError } from '../errors';
 

@@ -15,8 +15,8 @@
  *           → reports back: connection string, tables created, ready to use
  */
 
-import { createCodingEngine } from '@bk/agent-coding';
-import { CallbackTransport } from '@bk/agent-core';
+import { createCodingEngine } from '@backendkit-labs/agent-coding';
+import { CallbackTransport } from '@backendkit-labs/agent-core';
 
 const transport = new CallbackTransport((event) => {
     if (event.type === 'token') process.stdout.write(event.content);

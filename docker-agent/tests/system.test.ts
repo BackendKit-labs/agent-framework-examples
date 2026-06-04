@@ -1,7 +1,7 @@
 import { GenericContainer, Wait, StartedTestContainer } from 'testcontainers';
 import { getClient, resetClient } from '../src/docker/client';
 import { systemInfo, systemPrune } from '../src/tools/system';
-import type { ExecutionContext } from '@bk/agent-core';
+import type { ExecutionContext } from '@backendkit-labs/agent-core';
 
 let dind: StartedTestContainer;
 let dockerHost: string;

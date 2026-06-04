@@ -9,7 +9,7 @@ import {
     AgentLoader,
     CODING_AGENTS,
     type ProvidersConfig,
-} from '@bk/agent-coding';
+} from '@backendkit-labs/agent-coding';
 import {
     CallbackTransport,
     SlashCommandRegistry,
@@ -25,7 +25,7 @@ import {
     type IterationMode,
     type IterationStats,
     type WorkspacesConfig,
-} from '@bk/agent-core';
+} from '@backendkit-labs/agent-core';
 
 import { Terminal } from '../src/ui/terminal';
 import { agentEvents } from '../src/ui/agent-events';
@@ -267,6 +267,7 @@ program
                 agentName: cur?.name,
                 skillsCount: allSkills.length,
                 customAgentsCount: allAgents.filter(a => (a as any).source !== 'builtin').length,
+                activeCwd: activeAppPath,
             };
         };
 

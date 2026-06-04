@@ -8,15 +8,15 @@ import {
     AgentLoader,
     InitWorkflow,
     CODING_AGENTS,
-} from '@bk/agent-coding';
-import type { AgentProfile } from '@bk/agent-core';
+} from '@backendkit-labs/agent-coding';
+import type { AgentProfile } from '@backendkit-labs/agent-core';
 import {
     CallbackTransport,
     SlashCommandRegistry,
     registerBuiltinCommands,
     getProjectDir,
     type MCPServerConfig,
-} from '@bk/agent-core';
+} from '@backendkit-labs/agent-core';
 import { renderEvent } from './display';
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -178,7 +178,7 @@ function makeEngine(agentId: string, cwd: string, mcpServers?: MCPServerConfig[]
         onToolApproval: async (toolName, agentId, argsPreview) => {
             if (iterationMode !== 'manual') return 'approve';
 
-            return new Promise<import('@bk/agent-core').ToolApprovalDecision>(resolve => {
+            return new Promise<import('@backendkit-labs/agent-core').ToolApprovalDecision>(resolve => {
                 const preview = argsPreview.length > 120 ? argsPreview.slice(0, 120) + '…' : argsPreview;
                 process.stdout.write(
                     `\n  ${col(c.yellow, '⚠')} ${col(c.white, agentId)} → ${col(c.cyan, toolName)}\n` +
@@ -248,7 +248,7 @@ function buildCtx(
                 return { name: s.name, url: s.url, connected: !!live, toolCount: live?.toolCount ?? 0 };
             });
         },
-        mcpAdd: async (cfg: import('@bk/agent-core').MCPServerConfig) => {
+        mcpAdd: async (cfg: import('@backendkit-labs/agent-core').MCPServerConfig) => {
             const current = loader.load();
             const servers = current.mcpServers ?? [];
             if (!servers.find(s => s.name === cfg.name)) {

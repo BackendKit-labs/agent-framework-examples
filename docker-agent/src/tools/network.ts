@@ -1,5 +1,5 @@
-﻿import { execFile } from 'child_process';
-import { defineTool, z } from '@bk/agent-core';
+import { execFile } from 'child_process';
+import { defineTool, z } from '@backendkit-labs/agent-core';
 import { getClient } from '../docker/client';
 import { loadConfig } from '../config';
 

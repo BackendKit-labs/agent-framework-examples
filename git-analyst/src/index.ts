@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { AgentMCPServer } from '@bk/mcp-server';
-import { createCodingEngineFromConfig } from '@bk/agent-coding';
-import { CallbackTransport } from '@bk/agent-core';
+import { AgentMCPServer } from '@backendkit-labs/mcp-server';
+import { createCodingEngineFromConfig } from '@backendkit-labs/agent-coding';
+import { CallbackTransport } from '@backendkit-labs/agent-core';
 import { z } from 'zod';
 
 const PORT = parseInt(process.env.PORT ?? '3010', 10);
