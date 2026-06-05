@@ -565,6 +565,8 @@ export class Terminal {
      * sin tener que responder individualmente cada una.
      */
     confirm(question: string): Promise<ConfirmResult> {
+        // Ensure cursor is visible — animation library may have hidden it
+        process.stdout.write('\x1b[?25h');
         return this.selectMenu<ConfirmResult>(
             question,
             MENU_OPTIONS,
@@ -631,11 +633,12 @@ export class Terminal {
      * que el output aparezca sin pisar el footer ni el prompt ❯.
      */
     prepareForOutput(): void {
+        // Always restore cursor — animation library may have hidden it
+        process.stdout.write('\x1b[?25h');
         if (this.footerShown) {
             this.footerShown = false;
             process.stdout.write('\x1b[1A\r\x1b[J');
         } else if (this.inlineStatusActive) {
-            // Limpiar el estado inline activo antes de escribir output del agente
             this.inlineStatusActive = false;
             process.stdout.write('\r\x1b[2K');
         }

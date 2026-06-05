@@ -111,19 +111,30 @@ export function formatToolCall(name: string, argsStr: string): string {
  * en la terminal. Trunca a 8 líneas y 120 columnas para evitar saturar
  * la pantalla con resultados extensos.
  */
+// Matches all VT100/ANSI escape sequences: SGR colors, cursor movement,
+// erase codes (\x1b[K), cursor hide (\x1b[?25l), etc.
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-9;?]*[A-Za-z]/g;
+
 export function formatToolResult(result: string): string {
-  const lines = result.split('\n').filter(l => l.trim());
-  if (!lines.length) return chalk.hex(theme.colors.textDim)('  \u23BF  ') + chalk.hex(theme.colors.textDim)('(no content)');
-  const maxLines = 8;
-  const maxCols = 120;
+  // Strip ANSI codes and <recap> tags (agents sometimes embed them in tool args/results)
+  const clean = result
+    .replace(ANSI_RE, '')
+    .replace(/<recap>[\s\S]*?<\/recap>/g, '')
+    .trimEnd();
+  if (!clean) return chalk.hex(theme.colors.textDim)('  \u23BF  (no content)');
+  const maxLines = 6;
+  const maxCols = 110;
+  // Keep blank lines \u2014 filtering them fragments multi-line outputs visually
+  const lines = clean.split('\n');
   const shown = lines.slice(0, maxLines);
   const extra = lines.length > maxLines ? lines.length - maxLines : 0;
   const body = shown.map((l, i) =>
     i === 0
-      ? chalk.hex(theme.colors.textDim)('  \u23BF  ') + chalk.hex(theme.colors.textDim)(l.slice(0, maxCols))
-      : chalk.hex(theme.colors.textDim)('     ' + l.slice(0, maxCols - 2))
+      ? chalk.hex(theme.colors.textDim)('  \u23BF  ' + l.slice(0, maxCols))
+      : chalk.hex(theme.colors.textDim)('     ' + l.slice(0, maxCols))
   ).join('\n');
-  return body + (extra > 0 ? chalk.hex(theme.colors.textDim)('\n     \u2026 +' + extra + ' l\u00EDneas m\u00E1s') : '');
+  return body + (extra > 0 ? chalk.hex(theme.colors.textDim)('\n     \u2026 +' + extra + ' l\u00EDneas') : '');
 }
 
 /**
@@ -153,6 +164,17 @@ export function formatResponseHeader(): string {
   return chalk.hex(theme.colors.success)('\n\u25C6 ') + chalk.bold.hex(theme.colors.info)('bk') + chalk.bold('-agent') + chalk.hex(theme.colors.textDim)('  ' + '\u2500'.repeat(fill));
 }
 
+export function formatAgentHeader(icon: string, name: string): string {
+  const label = `${icon}  ${name}`;
+  const fill = Math.max(0, w() - label.length - 4);
+  return chalk.hex(theme.colors.success)('\n\u25C6 ') + chalk.bold(label) + chalk.hex(theme.colors.textDim)('  ' + '\u2500'.repeat(fill));
+}
+
+// Compact variant for sub-agents \u2014 name only, no fill dashes
+export function formatAgentHeaderCompact(icon: string, name: string): string {
+  return chalk.hex(theme.colors.success)('\n\u25C6 ') + chalk.bold(`${icon}  ${name}`);
+}
+
 /**
  * @description Línea separadora que se adapta al ancho de la terminal.
  * Usada para marcar el final de una respuesta o sección.
@@ -169,10 +191,10 @@ export function formatUserEcho(text: string): string {
   return chalk.hex(theme.colors.primary)('\n$> ') + chalk.white(text);
 }
 
-function shortCwd(): string {
-  const cwd = process.cwd();
+function shortCwd(cwd?: string): string {
+  const resolved = cwd ?? process.cwd();
   const home = process.env.HOME || process.env.USERPROFILE || '';
-  const short = home ? cwd.replace(home, '~') : cwd;
+  const short = home ? resolved.replace(home, '~') : resolved;
   // Keep last 2 path segments if too long
   const max = 42;
   if (short.length <= max) return short;
@@ -212,6 +234,7 @@ export interface HeaderInfo {
   skillsCount?: number;
   customAgentsCount?: number;
   version?: string;
+  activeCwd?: string;
 }
 
 /**
@@ -235,6 +258,7 @@ export function formatHeader(info: HeaderInfo): string {
     skillsCount = 0,
     customAgentsCount = 0,
     version = '0.2.0',
+    activeCwd,
   } = info;
 
   const BK = chalk.bold.hex(theme.colors.info);
@@ -259,7 +283,7 @@ export function formatHeader(info: HeaderInfo): string {
   const vaultLabel = vaultConnected
     ? chalk.hex(theme.colors.success)('\uD83D\uDCDA ') + chalk.hex(theme.colors.success)(vaultName || 'vault')
     : chalk.hex(theme.colors.textDim)('\u25CB sin vault');
-  const line3Parts: string[] = [chalk.hex(theme.colors.textDim)(shortCwd()), vaultLabel];
+  const line3Parts: string[] = [chalk.hex(theme.colors.textDim)(shortCwd(activeCwd)), vaultLabel];
   if (skillsCount > 0) line3Parts.push(chalk.hex(theme.colors.textDim)(skillsCount + ' skill' + (skillsCount > 1 ? 's' : '')));
   if (customAgentsCount > 0) line3Parts.push(chalk.hex(theme.colors.textDim)(customAgentsCount + ' agente' + (customAgentsCount > 1 ? 's' : '') + ' custom'));
   if (memoryProject) {

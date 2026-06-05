@@ -192,9 +192,9 @@ export class Spinner {
         if (this.timer) { clearInterval(this.timer); this.timer = null; }
         if (clearLine && wasRunning) {
             if (this.statusCallback) {
-                this.statusCallback(''); // limpiar footer del terminal
+                this.statusCallback('');
             } else {
-                process.stdout.write('\r\x1b[2K');
+                process.stdout.write('\r\x1b[2K\x1b[?25h');
             }
         }
     }

@@ -36,6 +36,8 @@ import {
     formatToolResult,
     formatCommandOutput,
     formatResponseHeader,
+    formatAgentHeader,
+    formatAgentHeaderCompact,
     formatSeparator,
     formatMarkdown,
     extractProjectName,
@@ -147,7 +149,7 @@ program
     .option('-m, --model <model>', 'Modelo a usar', 'deepseek-chat')
     .option('-b, --base-url <url>', 'URL base de la API')
     .option('--max-iterations <n>', 'Max iteraciones de herramientas por turno', '100')
-    .option('--iteration-mode <mode>', 'Modo de iteracion: interactive | auto | step-by-step', 'interactive')
+    .option('--iteration-mode <mode>', 'Modo de iteracion: interactive | auto | step-by-step', 'step-by-step')
     .option('--command-timeout <s>', 'Timeout en segundos para run_command (0 = sin limite)')
     .option('--no-stream', 'Deshabilitar streaming')
     .option('--no-qa', 'Desactivar revision automatica de QA')
@@ -220,7 +222,9 @@ program
             modelName: currentModel,
         };
 
-        // Streaming recap filter state
+        // Response buffer — tokens accumulate here, rendered as Markdown on block_end
+        let agentResponseBuffer = '';
+        // Streaming recap filter state (kept for headless mode)
         let streamTail = '';
         let suppressingRecap = false;
         let recapBuffer = '';
@@ -346,31 +350,17 @@ program
             // Terminal (TUI) mode
             switch (event.type) {
                 case 'token': {
-                    if (!useStream) return;
-                    if (suppressingRecap) {
-                        recapBuffer += event.content;
-                        const endIdx = recapBuffer.indexOf('</recap>');
-                        if (endIdx !== -1) {
-                            const recap = recapBuffer.slice(0, endIdx).trim();
-                            suppressingRecap = false;
-                            recapBuffer = '';
-                            if (recap) showRecap(recap);
-                        }
-                        return;
-                    }
-                    streamTail += event.content;
-                    const idx = streamTail.indexOf('<recap>');
-                    if (idx !== -1) {
-                        if (idx > 0) process.stdout.write(streamTail.slice(0, idx));
-                        suppressingRecap = true;
-                        recapBuffer = streamTail.slice(idx + 7);
-                        streamTail = '';
-                        return;
-                    }
-                    const safe = Math.max(0, streamTail.length - 7);
-                    if (safe > 0) {
-                        process.stdout.write(streamTail.slice(0, safe));
-                        streamTail = streamTail.slice(safe);
+                    // Accumulate for formatted rendering on block_end
+                    agentResponseBuffer += event.content;
+                    // Update spinner label with the first meaningful line so the user
+                    // sees what the agent is generating without verbose raw streaming
+                    const firstLine = agentResponseBuffer
+                        .split('\n')[0]
+                        .replace(/\*\*/g, '')
+                        .replace(/^#+\s*/, '')
+                        .trim();
+                    if (firstLine.length > 5) {
+                        spinner.update(firstLine.length > 75 ? firstLine.slice(0, 72) + '…' : firstLine);
                     }
                     return;
                 }
@@ -378,16 +368,49 @@ program
                     terminal?.stopThinking();
                     spinner.stop();
                     terminal?.prepareForOutput();
+                    // Show brief planning text (first line) then clear — it's narration,
+                    // not the final response; the final response builds after the last tool call.
+                    // First non-empty, non-recap line of the buffer as planning hint
+                    const planningLines = agentResponseBuffer
+                        .replace(/<recap>[\s\S]*?<\/recap>/g, '')
+                        .split('\n')
+                        .map(l => l.trim())
+                        .filter(l => l.length > 0);
+                    const brief = planningLines[0] ?? '';
+                    if (brief.length > 10 && event.name !== 'ask_agent') {
+                        process.stdout.write(
+                            chalk.hex('#58A6FF').italic('  ↳ ' + (brief.length > 90 ? brief.slice(0, 87) + '…' : brief)) + '\n'
+                        );
+                    }
+                    agentResponseBuffer = '';
                     const argsStr = event.args_preview ?? '';
                     messageBuffer.add({ role: 'tool', content: `${event.name}(${argsStr.slice(0, 60)})`, timestamp: new Date(), meta: event.name });
-                    // Build a fake argsStr for formatToolCall (which expects JSON)
-                    try {
-                        const parsed = JSON.parse(argsStr);
-                        console.log(formatToolCall(event.name, argsStr));
-                        const diffOut = formatFileDiff(event.name, argsStr);
-                        if (diffOut) process.stdout.write(diffOut + '\n');
-                    } catch {
-                        console.log(formatToolCall(event.name, JSON.stringify({ input: argsStr })));
+
+                    // ask_agent: compact single line — use regex, not JSON.parse, because
+                    // args_preview may be truncated and not valid JSON
+                    if (event.name === 'ask_agent') {
+                        const idMatch  = argsStr.match(/"agent_id"\s*:\s*"([^"]+)"/);
+                        const qMatch   = argsStr.match(/"question"\s*:\s*"([^"]*)/);
+                        const agentId  = idMatch?.[1] ?? '';
+                        const rawQ     = (qMatch?.[1] ?? '').replace(/\\n/g, ' ').replace(/\*\*/g, '').replace(/#+\s*/g, '').trim();
+                        const qPreview = rawQ.length > 65 ? rawQ.slice(0, 62) + '…' : rawQ;
+                        const agentProfile = allAgents.find(a => a.id === agentId);
+                        // Use the agent's own icon — no extra prefix to avoid duplication
+                        const icon = agentProfile?.icon ?? '';
+                        const name = agentProfile?.name ?? (agentId || '?');
+                        process.stdout.write(
+                            chalk.dim('  ') + chalk.cyan(icon) + chalk.bold(`  ${name}`) +
+                            (qPreview ? chalk.dim('  ·  ' + qPreview) : '') + '\n'
+                        );
+                    } else {
+                        try {
+                            JSON.parse(argsStr);
+                            console.log(formatToolCall(event.name, argsStr));
+                            const diffOut = formatFileDiff(event.name, argsStr);
+                            if (diffOut) process.stdout.write(diffOut + '\n');
+                        } catch {
+                            console.log(formatToolCall(event.name, JSON.stringify({ input: argsStr })));
+                        }
                     }
                     spinner.startWithMetrics('Ejecutando…', liveMetrics);
                     return;
@@ -403,6 +426,9 @@ program
                 }
                 case 'agent_switch': {
                     currentAgentId = event.to;
+                    // DelegationBus emits agent_switch with from:'orchestrator' for sub-agent
+                    // calls — those are already shown as compact ask_agent lines, skip the header
+                    if ((event as any).from === 'orchestrator') return;
                     terminal?.stopThinking();
                     spinner.stop();
                     terminal?.prepareForOutput();
@@ -422,22 +448,43 @@ program
                     terminal?.stopThinking();
                     spinner.stop();
                     terminal?.prepareForOutput();
+                    agentResponseBuffer = '';
                     streamTail = '';
                     suppressingRecap = false;
                     recapBuffer = '';
                     const cur = allAgents.find(a => a.id === event.agent_id);
-                    if (!(cur as any)?.suppressDefaultOutput) {
-                        process.stdout.write(formatResponseHeader() + '\n');
+                    const agentIcon = event.agent_icon ?? cur?.icon ?? '◆';
+                    const agentName = event.agent_name ?? cur?.name ?? event.agent_id;
+                    if (event.agent_id === currentAgentId) {
+                        // Main agent: full header with trailing dashes
+                        process.stdout.write(formatAgentHeader(agentIcon, agentName) + '\n');
+                    } else {
+                        // Specialist: compact — name only, no fill dashes
+                        process.stdout.write(formatAgentHeaderCompact(agentIcon, agentName) + '\n');
                     }
+                    spinner.startWithMetrics('Pensando…', liveMetrics);
                     return;
                 }
                 case 'block_end': {
-                    if (streamTail && !suppressingRecap) {
-                        process.stdout.write(streamTail);
-                    }
+                    terminal?.stopThinking();
+                    spinner.stop();
+                    let text = agentResponseBuffer;
+                    agentResponseBuffer = '';
                     streamTail = '';
+                    // Extract ALL <recap> blocks — agents (orchestrator + sub-agents) may
+                    // each add one. Remove all from displayed text and show only the last
+                    // (most complete summary), deduplicated.
+                    const allRecaps = [...text.matchAll(/<recap>([\s\S]*?)<\/recap>/g)];
+                    text = text.replace(/<recap>[\s\S]*?<\/recap>/g, '').trim();
+                    if (allRecaps.length > 0) {
+                        const lastRecap = allRecaps[allRecaps.length - 1][1].trim();
+                        showRecap(lastRecap);
+                    }
+                    if (text.trim()) {
+                        terminal?.prepareForOutput();
+                        console.log(formatMarkdown(text));
+                    }
                     process.stdout.write('\n');
-                    console.log(formatSeparator());
                     return;
                 }
                 case 'thinking': {
@@ -461,12 +508,13 @@ program
                 case 'done': {
                     terminal?.stopThinking();
                     spinner.stop();
-                    if (useStream && streamTail && !suppressingRecap) {
-                        process.stdout.write(streamTail);
-                        process.stdout.write('\n');
+                    // Any remaining buffer not flushed by block_end (edge case: no sub-agent blocks)
+                    if (agentResponseBuffer.trim()) {
+                        terminal?.prepareForOutput();
+                        console.log(formatMarkdown(agentResponseBuffer));
+                        agentResponseBuffer = '';
                     }
                     streamTail = '';
-                    // Track last code block for Ctrl+Y
                     return;
                 }
                 case 'error': {
@@ -531,7 +579,14 @@ program
             onStep: async (stats: IterationStats) => {
                 if (agentEvents.isHeadless()) return true;
                 process.stdout.write('\n');
-                const result = await terminal.confirm(`[step-by-step] Iteracion ${stats.iterations} - Continuar?`);
+                const result = await terminal.confirm(
+                    `paso ${stats.iterations} · ${stats.toolCalls} tool calls — Continuar?`
+                );
+                if (result === 'all') {
+                    // User wants to run the rest without confirmations
+                    engine.setIterationMode('auto');
+                    return true;
+                }
                 return result !== 'no';
             },
             onToolApproval: async (toolName: string, agentId: string, argsPreview: string) => {
@@ -1151,6 +1206,9 @@ program
             projectName = path.basename(newCwd);
             pendingContext = `## Workspace: ${activeWorkspaceName ?? 'default'} | Project: ${projectName}\n\n${memoryContext?.sessionContent || '*(empty)*'}`;
             updateHeaderCallback();
+            // onRenderHeader() only fires on scroll — force immediate redraw inline
+            // so the user sees updated workspace/project in the current output stream
+            process.stdout.write('\n' + formatHeader(buildHeaderInfo()) + '\n');
         };
 
         cmdRegistry.register('/switch', 'Cambiar workspace/proyecto activo (picker TUI)', async ({ args }) => {
