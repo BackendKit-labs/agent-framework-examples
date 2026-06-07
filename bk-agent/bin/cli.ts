@@ -867,7 +867,7 @@ program
                 const target = ctx.args.trim();
                 await cmdRegistry.dispatch(
                     target ? `/workspace switch ${target}` : '/workspace switch',
-                    { ...ctx, appName: 'bk-agent', onCwdChange: headlessOnCwdChange, injectContext: (m) => { pendingContext = m; } },
+                    { ...ctx, ...engine.getCommandBindings(), appName: 'bk-agent', onCwdChange: headlessOnCwdChange, injectContext: (m) => { pendingContext = m; } },
                 );
                 await emitConfig();
             });
@@ -893,6 +893,7 @@ program
                         if (!text) return;
                         if (text.startsWith('/') || text.startsWith('@')) {
                             const handled = await cmdRegistry.dispatch(text, {
+                                ...engine.getCommandBindings(),
                                 emit: emitBlock,
                                 agents: allAgents.map(a => ({ id: a.id, name: a.name, description: a.description })),
                                 skills: allSkills.map(s => ({ name: s.name, description: s.description, triggers: s.triggers ?? [] })),
@@ -1218,6 +1219,7 @@ program
             // /switch <wsName> [projectName] — directo sin picker
             if (args) {
                 await cmdRegistry.dispatch(`/workspace switch ${args}`, {
+                    ...engine.getCommandBindings(),
                     emit: (t) => console.log(formatCommandOutput(t)),
                     appName: 'bk-agent',
                     onCwdChange: tuiOnCwdChange,
@@ -1375,6 +1377,7 @@ program
 
                 if (trimmed.startsWith('/')) {
                     const handled = await cmdRegistry.dispatch(trimmed, {
+                        ...engine.getCommandBindings(),
                         emit: (t) => console.log(formatCommandOutput(t)),
                         agents: allAgents.map(a => ({ id: a.id, name: a.name, description: a.description })),
                         skills: allSkills.map(s => ({ name: s.name, description: s.description, triggers: s.triggers ?? [] })),
@@ -1389,8 +1392,6 @@ program
                             if (options?.length) return terminal.select(question, options.map(o => ({ label: o.label, value: o.value })));
                             return terminal.input(question);
                         },
-                        setIterationMode: (mode) => engine.setIterationMode(mode),
-                        getIterationMode: () => engine.getIterationMode(),
                     });
                     if (handled) return;
                     console.log(formatCommandOutput(chalk.yellow(`Comando desconocido: ${trimmed.split(' ')[0]}`)));
