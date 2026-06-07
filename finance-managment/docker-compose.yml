@@ -31,7 +31,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-      - "3100:3100"
     environment:
       NODE_ENV: development
       DB_HOST: postgres
@@ -41,6 +40,8 @@ services:
       DB_NAME: finance_portfolio
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev-secret-change-in-production
+      # Match the Docker frontend port so CORS allows browser requests
+      CORS_ORIGIN: http://localhost
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,6 +49,10 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
+      # MCP servers must be accessible inside the backend container — the agent
+      # engine spawns them as child processes via spawn('node', [mcpPath]).
+      # Pre-build locally before starting: cd mcp-servers/smart-money-mcp-v2 && npm run build
+      - ./mcp-servers:/app/mcp-servers
     command: npm run dev
 
   frontend:
@@ -56,22 +61,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
-    depends_on:
-      - backend
-
-  news-research-mcp:
-    build:
-      context: ./mcp-servers/news-research-mcp
-      dockerfile: Dockerfile
-    # Communicates via stdio — no exposed ports needed
-    depends_on:
-      - backend
-
-  smart-money-mcp:
-    build:
-      context: ./mcp-servers/smart-money-mcp
-      dockerfile: Dockerfile
-    # Communicates via stdio — no exposed ports needed
     depends_on:
       - backend
 
