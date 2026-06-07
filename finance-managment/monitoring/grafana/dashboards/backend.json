@@ -1,0 +1,44 @@
+{
+  "title": "Finance Portfolio - Backend",
+  "uid": "backend",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+    {
+      "title": "Agent Health",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 0 },
+      "targets": [{ "expr": "up{job='backend'}" }]
+    },
+    {
+      "title": "API Request Rate",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 4, "y": 0 },
+      "targets": [{ "expr": "rate(http_requests_total[5m])" }]
+    },
+    {
+      "title": "Agent Error Rate",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 0 },
+      "targets": [{ "expr": "rate(agent_errors_total[5m])" }]
+    },
+    {
+      "title": "Active WebSocket Connections",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 8 },
+      "targets": [{ "expr": "websocket_connections_active" }]
+    },
+    {
+      "title": "Database Query Duration",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 4, "y": 8 },
+      "targets": [{ "expr": "rate(typeorm_queries_duration_seconds_sum[5m])" }]
+    },
+    {
+      "title": "Redis Memory Usage",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 8 },
+      "targets": [{ "expr": "redis_memory_used_bytes" }]
+    }
+  ]
+}

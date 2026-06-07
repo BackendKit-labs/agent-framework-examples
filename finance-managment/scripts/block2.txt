@@ -1,0 +1,29 @@
+execute: async ({ symbol }) => {
+        const sym = symbol.toUpperCase();
+        try {
+          // 1. Buscar en DB local primero
+          const signals = await this.signalRepo.find({
+            where: { symbol: sym },
+            order: { detectedAt: 'DESC' },
+            take: 5,
+          });
+
+          if (signals.length > 0) {
+            const latestSignal = signals[0];
+            const investors = await this.investorRepo.find({ where: { isActive: true } });
+            return JSON.stringify({
+              symbol: sym,
+              signalType: latestSignal.signalType,
+              conviction: (latestSignal.conviction * 100).toFixed(0) + '%',
+              investorCount: latestSignal.investorCount,
+              netFlow: latestSignal.netFlow,
+              backingInvestors: latestSignal.backingInvestors?.slice(0, 5).map((i: any) => i.name) || [],
+              totalTrackedInvestors: investors.length,
+              detectedAt: latestSignal.detectedAt,
+              _source: 'Base de datos local (SmartMoneyTrackerAgent)',
+              _timestamp: new Date().toISOString(),
+            });
+          }
+
+          // 2. Si no hay datos locales, intentar smart-money-mcp
+          this.logger.log(`No local data for ${sym},

@@ -1,0 +1,44 @@
+return defineTool({
+      name: 'get_smart_money_signal',
+      description: 'Obtiene señales de inversores institucionales. Primero busca en DB local, si no hay datos consulta smart-money-mcp (SEC EDGAR).',
+      input: z.object({
+        symbol: z.string().describe('Símbolo del activo'),
+      }),
+      execute: async ({ symbol }) => {
+        const sym = symbol.toUpperCase();
+        try {
+          // 1. Buscar en DB local primero
+          const signals = await this.signalRepo.find({
+            where: { symbol: sym },
+            order: { detectedAt: 'DESC' },
+            take: 5,
+          });
+
+          if (signals.length > 0) {
+            const latestSignal = signals[0];
+            const investors = await this.investorRepo.find({ where: { isActive: true } });
+            return JSON.stringify({
+              symbol: sym,
+              signalType: latestSignal.signalType,
+              conviction: (latestSignal.conviction * 100).toFixed(0) + '%',
+              investorCount: latestSignal.investorCount,
+              netFlow: latestSignal.netFlow,
+              backingInvestors: latestSignal.backingInvestors?.slice(0, 5).map((i: any) => i.name) || [],
+              totalTrackedInvestors: investors.length,
+              detectedAt: latestSignal.detectedAt,
+              _source: 'Base de datos local (SmartMoneyTrackerAgent)',
+              _timestamp: new Date().toISOString(),
+            });
+          }
+
+          // 2. Si no hay datos locales, intentar smart-money-mcp
+          this.logger.log(`No local data for ${sym}, trying smart-money-mcp...`);
+          
+          try {
+            const { execSync } = require('child_process');
+            const pathMod = require('path');
+            const mcpPath = pathMod.resolve(process.cwd(), 'mcp-servers/smart-money-mcp-v2/dist/index.js');
+            const req = JSON.stringify({
+              jsonrpc: '2.0', id: 1, method: 'tools/call',
+              params: { name: 'get_13f_filings', arguments: { cik: '0001576288', useRealData: true } },
+            }

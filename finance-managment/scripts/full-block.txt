@@ -1,0 +1,148 @@
+, 60000);
+      });
+
+      this.logger.log(`✅ Agent analysis completed: ${result.substring(0, 100)}...`);
+      return { result: result || 'No response generated', steps };
+    } catch (error) {
+      this.logger.error('Agent analysis failed:', error);
+      return { result: `Analysis failed: ${(error as Error).message}`, steps };
+    }
+  }
+
+  private createGetStockPriceTool() {
+    return defineTool({
+      name: 'get_stock_price',
+      description: 'Obtiene el precio actual de una acción o crypto desde Yahoo Finance. Fuente: Yahoo Finance API.',
+      input: z.object({
+        symbol: z.string().describe('Símbolo del activo (ej: AAPL, BTC-USD)'),
+      }),
+      execute: async ({ symbol }) => {
+        try {
+          const response = await fetch(
+            `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`,
+            { headers: { 'User-Agent': 'Mozilla/5.0' } },
+          );
+          const data: any = await response.json();
+          const meta = data?.chart?.result?.[0]?.meta;
+          if (!meta) return JSON.stringify({ error: 'Symbol not found', source: 'Yahoo Finance' });
+          return JSON.stringify({
+            symbol: symbol.toUpperCase(),
+            price: meta.regularMarketPrice || meta.previousClose,
+            name: meta.shortName || meta.longName,
+            currency: meta.currency || 'USD',
+            _source: 'Yahoo Finance',
+            _timestamp: new Date().toISOString(),
+            _url: `https://finance.yahoo.com/quote/${symbol}`,
+          });
+        } catch (error) {
+          return JSON.stringify({ error: (error as Error).message, source: 'Yahoo Finance' });
+        }
+      },
+    });
+  }
+
+  private createGetPortfolioTool() {
+    return defineTool({
+      name: 'get_portfolio_summary',
+      description: 'Obtiene el resumen del portafolio del usuario desde la base de datos local.',
+      input: z.object({
+        walletId: z.string().optional().describe('ID de la wallet'),
+      }),
+      execute: async ({ walletId }) => {
+        try {
+          const wallets = await this.walletRepo.find({ relations: ['portfolios', 'portfolios.holdings', 'portfolios.holdings.asset'] });
+          const wallet = walletId ? wallets.find(w => w.id === walletId) : wallets[0];
+          if (!wallet) return JSON.stringify({ error: 'No wallet found', _source: 'Base de datos local' });
+
+          const holdings = wallet.portfolios?.flatMap(p => p.holdings || []) || [];
+          const totalValue = holdings.reduce((sum, h) => sum + Number(h.currentValue), 0);
+
+          return JSON.stringify({
+            walletName: wallet.name,
+            totalValue,
+            portfolioCount: wallet.portfolios?.length || 0,
+            holdings: holdings.map(h => ({
+              symbol: h.asset?.symbol || 'unknown',
+              value: Number(h.currentValue),
+              allocation: totalValue > 0 ? Number(h.currentValue) / totalValue : 0,
+              return: Number(h.returnPercentage),
+              quantity: Number(h.quantity),
+            })),
+            _source: 'Base de datos local (PostgreSQL)',
+            _timestamp: new Date().toISOString(),
+          });
+        } catch (error) {
+          return JSON.stringify({ error: (error as Error).message, _source: 'Base de datos local' });
+        }
+      },
+    });
+  }
+
+  private createGetNewsSentimentTool() {
+    return defineTool({
+      name: 'get_news_sentiment',
+      description: 'Obtiene el sentimiento de noticias para un activo desde Yahoo Finance noticias (gratuito, sin API key).',
+      input: z.object({
+        symbol: z.string().describe('Símbolo del activo'),
+      }),
+      execute: async ({ symbol }) => {
+        try {
+          // Yahoo Finance RSS feed for news (gratuito, sin API key)
+          const response = await fetch(
+            `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}&newsCount=5`,
+            { headers: { 'User-Agent': 'Mozilla/5.0' } },
+          );
+          const data: any = await response.json();
+          const news = data?.news || [];
+
+          if (news.length === 0) {
+            return JSON.stringify({
+              symbol: symbol.toUpperCase(),
+              articleCount: 0,
+              sentiment: 'unknown',
+              _source: 'Yahoo Finance News',
+              _timestamp: new Date().toISOString(),
+            });
+          }
+
+          // Simple sentiment analysis based on title keywords
+          const positiveWords = ['record', 'surpass', 'growth', 'beat', 'raise', 'positive', 'upgrade', 'bullish'];
+          const negativeWords = ['miss', 'fall', 'decline', 'drop', 'investigation', 'lawsuit', 'downgrade', 'bearish'];
+          
+          let score = 0;
+          const articles = news.slice(0, 5).map((a: any) => {
+            const title = (a.title || '').toLowerCase();
+            let articleScore = 0;
+            positiveWords.forEach(w => { if (title.includes(w)) articleScore += 0.2; });
+            negativeWords.forEach(w => { if (title.includes(w)) articleScore -= 0.25; });
+            score += articleScore;
+            return { title: a.title, publisher: a.publisher, link: a.link };
+          });
+
+          const avgScore = score / articles.length;
+          const sentiment = avgScore > 0.1 ? 'positive' : avgScore < -0.1 ? 'negative' : 'neutral';
+
+          return JSON.stringify({
+            symbol: symbol.toUpperCase(),
+            articleCount: articles.length,
+            sentiment,
+            confidence: Math.min(1, Math.abs(avgScore) + 0.3).toFixed(2),
+            articles,
+            _source: 'Yahoo Finance News',
+            _timestamp: new Date().toISOString(),
+          });
+        } catch (error) {
+          return JSON.stringify({ error: (error as Error).message, _source: 'Yahoo Finance News' });
+        }
+      },
+    });
+  }
+
+  private createGetSmartMoneySignalTool() {
+    return defineTool({
+      name: 'get_smart_money_signal',
+      description: 'Obtiene señales de inversores institucionales. Primero busca en DB local, si no hay datos consulta smart-money-mcp (SEC EDGAR).',
+      input: z.object({
+        symbol: z.string().describe('Símbolo del activo'),
+      }),
+      
