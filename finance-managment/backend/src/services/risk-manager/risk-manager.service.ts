@@ -187,7 +187,7 @@ export class RiskManagerService {
     const variance = returns.reduce((s, r) => s + (r - mean) ** 2, 0) / returns.length;
     const stdDev = Math.sqrt(variance);
 
-    // VaR(95%) = -1.645 * stdDev (simplificado)
-    return Math.max(0, -1.645 * stdDev);
+    // VaR(95%) = -(μ - 1.645σ) — positive value representing potential loss
+    return Math.max(0, -mean + 1.645 * stdDev);
   }
 }

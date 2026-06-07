@@ -47,20 +47,26 @@ export class SignalFusionEngine {
    * Fusión principal: combina todas las señales de un activo en una recomendación única
    */
   fuse(signals: NormalizedSignal[], userWeights?: Partial<Record<string, number>>): FusedSignal {
-    if (signals.length === 0) {
+    const now = new Date();
+    const active = signals.filter(s => s.expiresAt > now);
+    const expired = signals.length - active.length;
+
+    if (active.length === 0) {
       return {
-        symbol: 'unknown',
+        symbol: signals[0]?.symbol ?? 'unknown',
         action: 'HOLD',
         score: 0,
         confidence: 0,
         contributions: [],
         conflict: null,
-        rationale: 'No signals available',
-        timestamp: new Date().toISOString(),
+        rationale: expired > 0 ? `All ${expired} signal(s) expired — no actionable data` : 'No signals available',
+        timestamp: now.toISOString(),
       };
     }
 
     const weights = { ...this.DEFAULT_WEIGHTS, ...userWeights };
+    // Replace with active-only signals for the rest of the computation
+    signals = active;
     const symbol = signals[0].symbol;
 
     // 1. Calcular score ponderado

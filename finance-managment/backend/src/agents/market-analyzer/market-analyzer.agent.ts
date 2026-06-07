@@ -101,6 +101,28 @@ export class MarketAnalyzerAgent {
     };
   }
 
+  normalizeTechnical(ta: TechnicalAnalysis, expiresInHours = 24): import('../../services/signal-fusion/signal-fusion.engine').NormalizedSignal {
+    const rsi = this.scoreRsi(ta.rsi);
+    const macd = this.scoreMacd(ta.macd.macd, ta.macd.signal);
+    const sma = this.scoreSma(ta.sma50, ta.sma200);
+
+    // Weighted composite: RSI 40%, MACD 40%, SMA trend 20%
+    const direction = Math.max(-1, Math.min(1, rsi.direction * 0.4 + macd.direction * 0.4 + sma.direction * 0.2));
+    const magnitude = Math.max(0, Math.min(1, rsi.magnitude * 0.4 + macd.magnitude * 0.4 + sma.magnitude * 0.2));
+
+    return {
+      symbol: ta.symbol,
+      source: 'technical',
+      direction,
+      magnitude,
+      confidence: 0.6,
+      sourceWeight: 0.10,
+      metadata: { rsi: ta.rsi, macd: ta.macd, sma50: ta.sma50, sma200: ta.sma200 },
+      expiresAt: new Date(Date.now() + expiresInHours * 3_600_000),
+      rationale: `RSI=${ta.rsi} (${ta.rsi < 30 ? 'oversold' : ta.rsi > 70 ? 'overbought' : 'neutral'}), MACD ${ta.macd.macd > ta.macd.signal ? 'above' : 'below'} signal, SMA50 ${ta.sma50 > ta.sma200 ? '>' : '<'} SMA200`,
+    };
+  }
+
   async technicalAnalysis(symbol: string, _interval = '1d'): Promise<TechnicalAnalysis> {
     const closes = await this.fetchClosingPrices(symbol, 200);
 
@@ -262,6 +284,31 @@ export class MarketAnalyzerAgent {
     const filtered = sources.filter(s => s.sourceType === type);
     if (filtered.length === 0) return 0;
     return filtered.reduce((sum, s) => sum + s.sentimentScore, 0) / filtered.length;
+  }
+
+  private scoreRsi(rsi: number): { direction: number; magnitude: number } {
+    if (rsi < 30) return { direction: 0.7, magnitude: 0.8 };
+    if (rsi < 45) return { direction: 0.3, magnitude: 0.5 };
+    if (rsi < 55) return { direction: 0, magnitude: 0.1 };
+    if (rsi < 70) return { direction: -0.2, magnitude: 0.4 };
+    return { direction: -0.7, magnitude: 0.8 };
+  }
+
+  private scoreMacd(macd: number, signal: number): { direction: number; magnitude: number } {
+    const diff = macd - signal;
+    return {
+      direction: diff > 0 ? 1 : diff < 0 ? -1 : 0,
+      magnitude: Math.min(1, Math.abs(diff) * 20),
+    };
+  }
+
+  private scoreSma(sma50: number, sma200: number): { direction: number; magnitude: number } {
+    if (sma50 === 0 || sma200 === 0) return { direction: 0, magnitude: 0 };
+    const ratio = (sma50 - sma200) / sma200;
+    return {
+      direction: ratio > 0 ? 1 : -1,
+      magnitude: Math.min(1, Math.abs(ratio) * 5),
+    };
   }
 
   private emptyResult(ticker: string): NewsSentimentResult {

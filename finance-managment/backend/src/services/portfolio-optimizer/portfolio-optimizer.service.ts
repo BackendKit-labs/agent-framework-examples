@@ -55,7 +55,7 @@ export class PortfolioOptimizerService {
       const portfolioReturn = expectedReturns.reduce((s, r, j) => s + r * weights[j], 0);
       const portfolioVariance = this.calculatePortfolioVariance(weights, covMatrix);
       const portfolioVol = Math.sqrt(portfolioVariance);
-      const sharpeRatio = (portfolioReturn - riskFreeRate) / portfolioVol;
+      const sharpeRatio = portfolioVol > 0 ? (portfolioReturn - riskFreeRate) / portfolioVol : 0;
 
       const allocations: Record<string, number> = {};
       weights.forEach((w, j) => { allocations[symbols[j]] = Math.round(w * 10000) / 100; });
@@ -68,7 +68,23 @@ export class PortfolioOptimizerService {
       });
     }
 
-    // 5. Find key portfolios
+    // 5. Find key portfolios — fall back to equal-weight if grid search found nothing
+    if (frontier.length === 0) {
+      const eqWeights = new Array(n).fill(1 / n);
+      const eqReturn = expectedReturns.reduce((s, r, i) => s + r * eqWeights[i], 0);
+      const eqVol = Math.sqrt(this.calculatePortfolioVariance(eqWeights, covMatrix));
+      const eqSharpe = eqVol > 0 ? (eqReturn - riskFreeRate) / eqVol : 0;
+      const eqAlloc: Record<string, number> = {};
+      eqWeights.forEach((w, i) => { eqAlloc[symbols[i]] = Math.round(w * 10000) / 100; });
+      const fallback: EfficientFrontierPoint = {
+        expectedReturn: Math.round(eqReturn * 10000) / 100,
+        volatility: Math.round(eqVol * 10000) / 100,
+        sharpeRatio: Math.round(eqSharpe * 1000) / 1000,
+        allocations: eqAlloc,
+      };
+      return { efficientFrontier: [fallback], maxSharpePortfolio: fallback, minVolatilityPortfolio: fallback, correlationMatrix };
+    }
+
     const maxSharpePortfolio = frontier.reduce((best, p) => p.sharpeRatio > best.sharpeRatio ? p : best, frontier[0]);
     const minVolatilityPortfolio = frontier.reduce((best, p) => p.volatility < best.volatility ? p : best, frontier[0]);
 

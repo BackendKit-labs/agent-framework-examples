@@ -120,6 +120,8 @@ export class TaxHarvestService {
    */
   findHarvestOpportunities(minLoss = 500): HarvestOpportunity[] {
     const opportunities: HarvestOpportunity[] = [];
+    const now = Date.now();
+    const thirtyDaysMs = 30 * 86400000;
 
     for (const [symbol, lots] of this.taxLots.entries()) {
       const totalUnrealizedLoss = lots.reduce((sum, lot) => {
@@ -129,8 +131,9 @@ export class TaxHarvestService {
 
       if (totalUnrealizedLoss >= -minLoss) continue;
 
-      // Check wash-sale rule (30 days)
-      const recentBuys = lots.filter(l => l.holdingPeriod < 30);
+      // Wash-sale rule: compute holding period live from purchaseDate (not from stale lot.holdingPeriod
+      // which is only updated inside updatePrices()). Risk if any lot was purchased within last 30 days.
+      const recentBuys = lots.filter(l => now - l.purchaseDate.getTime() < thirtyDaysMs);
       const washSaleRisk = recentBuys.length > 0;
 
       // Find offset gains
@@ -139,7 +142,8 @@ export class TaxHarvestService {
       const totalGains = offsetGains.reduce((sum, g) => sum + g.gainLoss, 0);
       const taxBenefit = Math.min(Math.abs(totalUnrealizedLoss), totalGains) * 0.20; // 20% tax rate assumption
 
-      const avgHoldingPeriod = lots.reduce((sum, l) => sum + l.holdingPeriod, 0) / lots.length;
+      // Holding period also computed live to avoid stale data from updatePrices()
+      const avgHoldingPeriod = lots.reduce((sum, l) => sum + Math.floor((now - l.purchaseDate.getTime()) / 86400000), 0) / lots.length;
 
       opportunities.push({
         symbol,

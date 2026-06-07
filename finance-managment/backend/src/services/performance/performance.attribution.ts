@@ -160,14 +160,16 @@ export class PerformanceAttributionService {
   private calculateTradingAttribution(trades: TradeRecord[]): number {
     if (trades.length === 0) return 0;
 
-    // Simplified: trading cost = 0.1% per trade (commission + slippage)
+    // Trading cost: 0.1% per trade (commission + slippage)
     const tradingCost = trades.length * 0.001;
 
-    // Timing impact: difference between trade return and average return
+    // Timing friction: high dispersion in trade returns signals inconsistent entry/exit timing.
+    // Σ(xᵢ − μ) is always 0 by definition, so we use variance (stdDev) as the friction proxy instead.
     const avgReturn = trades.reduce((s, t) => s + t.returnPercentage, 0) / trades.length;
-    const timingImpact = trades.reduce((sum, t) => sum + (t.returnPercentage - avgReturn), 0) / trades.length;
+    const returnVariance = trades.reduce((s, t) => s + (t.returnPercentage - avgReturn) ** 2, 0) / trades.length;
+    const timingFriction = Math.sqrt(returnVariance) * 0.1; // 10% of return stdDev as timing drag
 
-    return -(tradingCost + Math.abs(timingImpact));
+    return -(tradingCost + timingFriction);
   }
 
   /**

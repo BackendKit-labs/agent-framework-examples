@@ -134,9 +134,36 @@ describe('SignalFusionEngine', () => {
         makeSignal({ source: 'technical', direction: 0.5, magnitude: 0.6, confidence: 0.7, sourceWeight: 0.1 }),
       ];
       const result = engine.fuse(signals);
-      // 3 sources → sourceDiversity = 0.75, avgConfidence = 0.8
-      // confidence = 0.75*0.4 + 0.8*0.6 = 0.3 + 0.48 = 0.78
       expect(result.confidence).toBeGreaterThan(0.5);
+    });
+
+    describe('signal expiry', () => {
+      it('should ignore expired signals', () => {
+        const signals = [
+          makeSignal({ direction: 0.9, magnitude: 0.9, confidence: 0.9, expiresAt: new Date(Date.now() - 1000) }), // expired
+          makeSignal({ source: 'smart_money_13f', direction: 0.9, magnitude: 0.9, confidence: 0.9, expiresAt: new Date(Date.now() - 1000) }), // expired
+        ];
+        const result = engine.fuse(signals);
+        expect(result.action).toBe('HOLD');
+        expect(result.rationale).toContain('expired');
+      });
+
+      it('should use only non-expired signals when mixed', () => {
+        const signals = [
+          makeSignal({ source: 'news', direction: -0.9, magnitude: 0.9, confidence: 0.9, expiresAt: new Date(Date.now() - 1000) }), // expired bearish
+          makeSignal({ source: 'smart_money_13f', direction: 0.9, magnitude: 0.9, confidence: 0.9, expiresAt: new Date(Date.now() + 86400000) }), // active bullish
+        ];
+        const result = engine.fuse(signals);
+        // Only the bullish signal is active → STRONG_BUY or CAUTIOUS_BUY
+        expect(['STRONG_BUY', 'CAUTIOUS_BUY']).toContain(result.action);
+      });
+
+      it('should return symbol in rationale when all signals expire', () => {
+        const signals = [makeSignal({ expiresAt: new Date(Date.now() - 1000) })];
+        const result = engine.fuse(signals);
+        expect(result.symbol).toBe('AAPL');
+        expect(result.confidence).toBe(0);
+      });
     });
   });
 });
