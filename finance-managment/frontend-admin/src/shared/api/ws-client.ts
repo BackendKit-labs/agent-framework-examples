@@ -1,33 +1,37 @@
+import { io, Socket } from 'socket.io-client';
 import { useEffect, useRef, useCallback } from 'react';
 
 type MessageHandler = (data: any) => void;
 
 export function useWebSocket(handlers: Record<string, MessageHandler>) {
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  // Keep handlers fresh without triggering reconnect on every render
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
 
   useEffect(() => {
     const token = sessionStorage.getItem('accessToken');
-    const ws = new WebSocket(`ws://localhost:3000/ws/notifications?token=${token}`);
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      const handler = handlers[message.type];
-      if (handler) handler(message.payload);
+    const socket = io('/ws/notifications', {
+      auth: { token: token ?? '' },
+      // Prefer WebSocket, fall back to polling (required for Socket.IO handshake)
+      transports: ['websocket', 'polling'],
+    });
+
+    // Route each named Socket.IO event to the matching handler
+    socket.onAny((event: string, data: unknown) => {
+      handlersRef.current[event]?.(data);
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
     };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    ws.onclose = () => {
-      // Auto-reconnect after 5 seconds
-      setTimeout(() => {
-        // Reconnection logic
-      }, 5000);
-    };
-
-    wsRef.current = ws;
-    return () => ws.close();
-  }, []);
-
-  const send = useCallback((type: string, payload: any) => {
-    wsRef.current?.send(JSON.stringify({ type, payload }));
+  const send = useCallback((event: string, data: unknown) => {
+    socketRef.current?.emit(event, data);
   }, []);
 
   return { send };

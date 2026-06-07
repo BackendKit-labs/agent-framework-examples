@@ -31,63 +31,56 @@ export class BacktestingController {
     const symbol = params.symbol.toUpperCase();
     this.logger.log(`Running backtest for ${symbol}...`);
 
-    // 1. Fetch real historical prices from Yahoo Finance
-    const prices = await this.fetchHistoricalPrices(symbol);
-    
-    if (!prices || prices.length < 20) {
+    // 1. Fetch real historical prices from Yahoo Finance (date + closing price pairs)
+    const pricePoints = await this.fetchHistoricalPrices(symbol);
+
+    if (!pricePoints || pricePoints.length < 20) {
       this.logger.warn(`Not enough data for ${symbol}, using simulated data`);
       return this.runSimulatedBacktest(params);
     }
 
-    this.logger.log(`Fetched ${prices.length} days of historical data for ${symbol}`);
+    this.logger.log(`Fetched ${pricePoints.length} days of historical data for ${symbol}`);
 
-    // 2. Generate signals based on real price movements
+    // 2. Generate signals based on real price movements, using actual historical dates
     const signals: BacktestSignal[] = [];
-    for (let i = 20; i < prices.length; i++) {
-      const price = prices[i];
-      const prevPrice = prices[i - 1];
+    for (let i = 20; i < pricePoints.length; i++) {
+      const { date, price } = pricePoints[i];
+      const prevPrice = pricePoints[i - 1].price;
       const change = (price - prevPrice) / prevPrice;
 
       // Simple strategy: buy on 5% drop, sell on 5% rise
       if (change < -0.05 && Math.random() < 0.3) {
-        signals.push({
-          date: new Date(),
-          symbol,
-          action: 'buy',
-          price,
-          confidence: 0.6 + Math.random() * 0.3,
-          source: params.strategy,
-        });
+        signals.push({ date, symbol, action: 'buy', price, confidence: 0.6 + Math.random() * 0.3, source: params.strategy });
       } else if (change > 0.05 && Math.random() < 0.3) {
-        signals.push({
-          date: new Date(),
-          symbol,
-          action: 'sell',
-          price,
-          confidence: 0.6 + Math.random() * 0.3,
-          source: params.strategy,
-        });
+        signals.push({ date, symbol, action: 'sell', price, confidence: 0.6 + Math.random() * 0.3, source: params.strategy });
       }
     }
 
-    // 3. Run backtest with real prices
+    // 3. Run backtest — also pass benchmark prices so alpha/beta/benchmarkReturn can be calculated
+    const benchmarkPrices = pricePoints.map(p => ({
+      date: p.date.toISOString().split('T')[0],
+      price: p.price,
+    }));
+
     const result = await this.engine.runBacktest({
       strategy: params.strategy,
       signals,
       initialCapital: params.initialCapital || 100000,
+      benchmark: symbol,
+      benchmarkPrices,
     });
 
-    // Get current price and price range
-    const currentPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
-    const highPrice = prices.length > 0 ? Math.max(...prices) : 0;
-    const lowPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const allPrices = pricePoints.map(p => p.price);
+    const currentPrice = allPrices[allPrices.length - 1] ?? 0;
+    const highPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0;
+    const lowPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0;
 
     return {
       ...result,
       currentPrice,
       highPrice,
       lowPrice,
-      priceCount: prices.length,
+      priceCount: pricePoints.length,
       _dataSource: 'Yahoo Finance (real historical prices)',
       _note: 'Prices are real, but trading signals are simulated for demo purposes',
     };
@@ -96,7 +89,7 @@ export class BacktestingController {
   /**
    * Fetch historical prices from Yahoo Finance (public, no API key)
    */
-  private async fetchHistoricalPrices(symbol: string): Promise<number[]> {
+  private async fetchHistoricalPrices(symbol: string): Promise<Array<{ date: Date; price: number }>> {
     try {
       const endDate = Math.floor(Date.now() / 1000);
       const startDate = endDate - 365 * 86400; // 1 year ago
@@ -112,12 +105,18 @@ export class BacktestingController {
       }
 
       const data: any = await response.json();
-      const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0];
-      
-      if (!quotes?.close) return [];
+      const result = data?.chart?.result?.[0];
+      const timestamps: number[] = result?.timestamp ?? [];
+      const closes: (number | null)[] = result?.indicators?.quote?.[0]?.close ?? [];
 
-      // Filter out null values and return closing prices
-      return quotes.close.filter((p: number | null) => p !== null) as number[];
+      const points: Array<{ date: Date; price: number }> = [];
+      for (let i = 0; i < timestamps.length; i++) {
+        const price = closes[i];
+        if (price !== null && price !== undefined) {
+          points.push({ date: new Date(timestamps[i] * 1000), price });
+        }
+      }
+      return points;
     } catch (error) {
       this.logger.error(`Failed to fetch prices for ${symbol}:`, (error as Error).message);
       return [];

@@ -23,7 +23,8 @@ export default function DashboardPage() {
 
   const totalValue = wallets?.reduce((sum, w) => sum + Number(w.totalValue), 0) || 0;
   const totalWallets = wallets?.length || 0;
-  const totalPortfolios = wallets?.reduce((s, w) => s + (w.portfolioCount || 0), 0) || 0;
+  // Backend returns portfolios as a full array via TypeORM relation, not a count field
+  const totalPortfolios = wallets?.reduce((s, w) => s + (w.portfolios?.length ?? w.portfolioCount ?? 0), 0) || 0;
 
   return (
     <Box>

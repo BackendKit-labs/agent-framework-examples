@@ -207,7 +207,7 @@ export default function WalletDetailPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <IconButton size="small" color="error" onClick={() => handleRemoveHolding(h.id)}><DeleteIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" color="error" onClick={() => handleRemoveHolding(h.id)}><DeleteSvg /></IconButton>
                         </TableCell>
                       </TableRow>
                     ))}
