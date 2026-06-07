@@ -1353,54 +1353,6 @@ program
             console.log(formatCommandOutput(lines.join('\n')));
         });
 
-        // ── /plugin command ───────────────────────────────────────────────────
-
-        const KNOWN_PLUGINS: Record<string, { npm: string; label: string; tools: string[] }> = {
-            docker: { npm: '@backendkit-labs/docker-agent', label: '🐳 Docker Agent', tools: ['docker_execute', 'docker_deploy', 'docker_status'] },
-            k8s:    { npm: '@backendkit-labs/k8s-agent',    label: '☸️  Kubernetes Agent', tools: ['k8s_execute', 'k8s_deploy', 'k8s_status'] },
-        };
-
-        cmdRegistry.register('/plugin', 'Gestionar plugins MCP (docker, k8s)', async ({ args, emit }) => {
-            const [sub, name] = (args ?? '').trim().split(/\s+/);
-            const cfg = configLoader.load();
-            const servers = cfg.mcpServers ?? [];
-
-            if (!sub || sub === 'list') {
-                if (!servers.length) { emit('Sin plugins instalados.\n\nDisponibles: docker, k8s'); return; }
-                const lines = ['Plugins instalados:\n'];
-                for (const s of servers) {
-                    const def = KNOWN_PLUGINS[s.name];
-                    lines.push(`  ${(def?.label ?? s.name).padEnd(24)} ${s.command ?? ''} ${(s.args ?? []).join(' ')}`);
-                    if (def) lines.push(`    tools: ${def.tools.join(', ')}`);
-                }
-                emit(lines.join('\n'));
-                return;
-            }
-
-            if (sub === 'add') {
-                if (!name) { emit('Uso: /plugin add <nombre>\nDisponibles: ' + Object.keys(KNOWN_PLUGINS).join(', ')); return; }
-                const def = KNOWN_PLUGINS[name];
-                if (!def) { emit(`Plugin desconocido: "${name}"\nDisponibles: ${Object.keys(KNOWN_PLUGINS).join(', ')}`); return; }
-                if (servers.some(s => s.name === name)) { emit(`Plugin "${name}" ya está instalado.`); return; }
-                cfg.mcpServers = [...servers, { name, command: 'npx', args: ['-y', def.npm] }];
-                configLoader.save(cfg);
-                emit(`✓ Plugin "${name}" agregado.\n  Tools: ${def.tools.join(', ')}\n\nReinicia el agente para activarlo.`);
-                return;
-            }
-
-            if (sub === 'remove') {
-                if (!name) { emit('Uso: /plugin remove <nombre>'); return; }
-                const before = servers.length;
-                cfg.mcpServers = servers.filter(s => s.name !== name);
-                if (cfg.mcpServers.length === before) { emit(`Plugin "${name}" no encontrado.`); return; }
-                configLoader.save(cfg);
-                emit(`✓ Plugin "${name}" removido.\n\nReinicia el agente para aplicar.`);
-                return;
-            }
-
-            emit('Uso: /plugin [list | add <nombre> | remove <nombre>]\nDisponibles: ' + Object.keys(KNOWN_PLUGINS).join(', '));
-        });
-
         // ── Terminal setup ────────────────────────────────────────────────────
 
         const SLASH_COMMANDS = cmdRegistry.getAll().map(c => c.name);
