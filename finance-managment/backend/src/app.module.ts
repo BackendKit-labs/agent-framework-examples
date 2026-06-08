@@ -23,6 +23,8 @@ import { TaxHarvestModule } from './services/tax-harvest/tax-harvest.module';
 import { BacktestingModule } from './services/backtesting/backtesting.module';
 import { PerformanceModule } from './services/performance/performance.module';
 import { PortfolioOptimizerModule } from './services/portfolio-optimizer/portfolio-optimizer.module';
+import { RiskProfilingModule } from './modules/risk-profiling/risk-profiling.module';
+import { RebalancingModule } from './services/rebalancing/rebalancing.module';
 
 // MCP Gateway
 import { McpGatewayModule } from './mcp-gateway/mcp-gateway.module';
@@ -79,6 +81,8 @@ import { SharedModule } from './shared/shared.module';
     BacktestingModule,
     PerformanceModule,
     PortfolioOptimizerModule,
+    RiskProfilingModule,
+    RebalancingModule,
 
     // MCP Gateway
     McpGatewayModule,

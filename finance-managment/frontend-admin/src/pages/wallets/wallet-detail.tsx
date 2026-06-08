@@ -1,15 +1,90 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Grid, Card, CardContent, Button, Dialog, DialogTitle, DialogContent, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Alert, Autocomplete } from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, Button, Dialog, DialogTitle, DialogContent, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Alert, Autocomplete, LinearProgress, Tooltip, CircularProgress } from '@mui/material';
 // SVG icons inline
 const ArrowBackSvg = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>;
 const EditSvg = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>;
 const DeleteSvg = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>;
 const AddSvg = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>;
 import { useWallet } from '../../features/wallets/hooks/useWallets';
+import { useRebalancing } from '../../features/risk-profile/hooks/useRiskProfile';
 import { LoadingState } from '../../shared/components/LoadingState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import client from '../../shared/api/client';
+import type { RebalancingAnalysis } from '../../shared/api/types';
+
+const ASSET_LABELS: Record<string, string> = {
+  stock: 'Acciones', bond: 'Renta Fija', etf: 'ETFs', crypto: 'Cripto',
+};
+
+function RebalancingWidget({ walletId, portfolioId, hasTarget }: { walletId: string; portfolioId: string; hasTarget: boolean }) {
+  const { data, isLoading, error } = useRebalancing(walletId, portfolioId, hasTarget);
+
+  if (!hasTarget) {
+    return (
+      <Alert severity="info" sx={{ mt: 2 }}>
+        Sin asignación objetivo. Ve a <strong>Risk Management</strong> para completar tu perfil y aplicarlo a este portfolio.
+      </Alert>
+    );
+  }
+  if (isLoading) return <LinearProgress sx={{ mt: 2 }} />;
+  if (error) return null;
+  if (!data) return null;
+
+  return (
+    <Box mt={2}>
+      <Box display="flex" alignItems="center" gap={1} mb={1}>
+        <Typography variant="subtitle2">Análisis de Rebalanceo</Typography>
+        <Chip
+          size="small"
+          label={data.needsRebalance ? `⚠ Rebalanceo sugerido (${data.maxDeviation.toFixed(1)}pp desvío)` : '✓ Balanceado'}
+          color={data.needsRebalance ? 'warning' : 'success'}
+        />
+      </Box>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>Activo</TableCell>
+            <TableCell align="right">Actual</TableCell>
+            <TableCell align="right">Objetivo</TableCell>
+            <TableCell align="right">Desvío</TableCell>
+            <TableCell>Acción</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {data.moves.map(m => (
+            <TableRow key={m.assetType}>
+              <TableCell>{ASSET_LABELS[m.assetType] ?? m.assetType}</TableCell>
+              <TableCell align="right">{m.currentPct.toFixed(1)}%</TableCell>
+              <TableCell align="right">{m.targetPct.toFixed(1)}%</TableCell>
+              <TableCell align="right">
+                <Typography
+                  variant="body2"
+                  color={Math.abs(m.deltaPct) >= data.tolerance ? 'warning.main' : 'text.secondary'}
+                  fontWeight={Math.abs(m.deltaPct) >= data.tolerance ? 700 : 400}
+                >
+                  {m.deltaPct > 0 ? '+' : ''}{m.deltaPct.toFixed(1)}pp
+                </Typography>
+              </TableCell>
+              <TableCell>
+                {m.action !== 'HOLD' && (
+                  <Tooltip title={`${m.action === 'BUY' ? 'Comprar' : 'Vender'} ~$${Math.abs(m.deltaValue).toLocaleString()}`}>
+                    <Chip
+                      size="small"
+                      label={m.action === 'BUY' ? 'Comprar' : 'Vender'}
+                      color={m.action === 'BUY' ? 'success' : 'error'}
+                      variant="outlined"
+                    />
+                  </Tooltip>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Box>
+  );
+}
 
 export default function WalletDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,7 +116,8 @@ export default function WalletDetailPage() {
     if (!portfolioName.trim()) return;
     try {
       await client.post(`/wallets/${id}/portfolios`, { name: portfolioName, strategy: portfolioStrategy || undefined });
-      setPortfolioName(''); setPortfolioStrategy(''); setOpenCreate(false); refetch();
+      await refetch();
+      setPortfolioName(''); setPortfolioStrategy(''); setOpenCreate(false);
     } catch (err) { console.error(err); }
   };
 
@@ -49,7 +125,8 @@ export default function WalletDetailPage() {
     if (!selectedPortfolio || !portfolioName.trim()) return;
     try {
       await client.patch(`/wallets/${id}/portfolios/${selectedPortfolio.id}`, { name: portfolioName, strategy: portfolioStrategy || undefined });
-      setOpenEdit(false); setSelectedPortfolio(null); refetch();
+      await refetch();
+      setOpenEdit(false); setSelectedPortfolio(null);
     } catch (err) { console.error(err); }
   };
 
@@ -57,7 +134,8 @@ export default function WalletDetailPage() {
     if (!selectedPortfolio) return;
     try {
       await client.delete(`/wallets/${id}/portfolios/${selectedPortfolio.id}`);
-      setOpenDelete(false); setSelectedPortfolio(null); refetch();
+      await refetch();
+      setOpenDelete(false); setSelectedPortfolio(null);
     } catch (err) { console.error(err); }
   };
 
@@ -103,12 +181,13 @@ export default function WalletDetailPage() {
       const res = await client.post('/transactions', {
         type: 'buy', assetId, quantity,
         price, walletId: id, portfolioId: selectedPortfolio.id,
-        userId: '392ef270-0acd-4b8a-9486-4a0100e946a0', reason: 'manual',
+        reason: 'manual',
       });
       console.log('Buy result:', res.data);
+      await refetch();
       setHoldingSymbol(''); setHoldingAmount(''); setHoldingPrice('');
       setCurrentAssetPrice(null);
-      setHoldingError(null); setOpenHolding(false); refetch();
+      setHoldingError(null); setOpenHolding(false);
     } catch (err: any) {
       const detail = err?.response?.data;
       const msg = detail?.message || err?.message || 'Failed to add holding';
@@ -118,7 +197,7 @@ export default function WalletDetailPage() {
   };
 
   const handleRemoveHolding = async (holdingId: string) => {
-    try { await client.delete(`/holdings/${holdingId}`); refetch(); }
+    try { await client.delete(`/holdings/${holdingId}`); await refetch(); }
     catch (err) { console.error(err); }
   };
 
@@ -186,6 +265,12 @@ export default function WalletDetailPage() {
                 <IconButton size="small" onClick={() => { setSelectedPortfolio(p); setOpenDelete(true); }}><DeleteSvg /></IconButton>
               </Box>
             </Box>
+
+            <RebalancingWidget
+              walletId={id!}
+              portfolioId={p.id}
+              hasTarget={!!(p.targetAllocations && Object.keys(p.targetAllocations).length > 0)}
+            />
 
             {p.holdings && p.holdings.length > 0 ? (
               <TableContainer component={Paper} sx={{ mt: 2 }}>

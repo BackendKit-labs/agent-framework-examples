@@ -10,6 +10,7 @@ import WalletDetailPage from '../pages/wallets/wallet-detail';
 import FusionPage from '../pages/fusion';
 import SmartMoneyPage from '../pages/smart-money';
 import BacktestingPage from '../pages/backtesting';
+import RiskProfilePage from '../pages/risk-profile';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,7 +46,7 @@ export function App() {
                     <Route path="/fusion" element={<FusionPage />} />
                     <Route path="/smart-money" element={<SmartMoneyPage />} />
                     <Route path="/backtesting" element={<BacktestingPage />} />
-                    <Route path="/risk" element={<div>Risk Management — Coming soon</div>} />
+                    <Route path="/risk" element={<RiskProfilePage />} />
                     <Route path="/performance" element={<div>Performance — Coming soon</div>} />
                   </Routes>
                 </Layout>

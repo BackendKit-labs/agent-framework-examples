@@ -84,3 +84,50 @@ export interface FusionProfile { id: string; name: string; weights: Record<strin
 
 // Co-investment
 export interface CoInvestmentCluster { direction: string; investorCount: number; totalCapital: number; topInvestors: string[]; averageConviction: number; signalStrength: string; }
+
+// Risk Profiling
+export type RiskProfileLevel = 'CONSERVADOR' | 'MODERADO' | 'DINAMICO' | 'AGRESIVO';
+
+export interface QuestionOption { id: string; label: string; score: number; }
+export interface Question { id: string; text: string; options: QuestionOption[]; }
+
+export interface RiskProfileResult {
+  score: number;
+  profile: RiskProfileLevel;
+  targetAllocation: Record<string, number>;
+  description: string;
+}
+export interface UserRiskProfile {
+  id: string;
+  userId: string;
+  answers: Record<string, string>;
+  score: number;
+  profile: RiskProfileLevel;
+  targetAllocation: Record<string, number>;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Rebalancing
+export interface RebalancingMove {
+  assetType: string;
+  currentPct: number;
+  targetPct: number;
+  deltaPct: number;
+  currentValue: number;
+  targetValue: number;
+  deltaValue: number;
+  action: 'BUY' | 'SELL' | 'HOLD';
+}
+export interface RebalancingAnalysis {
+  portfolioId: string;
+  portfolioName: string;
+  totalValue: number;
+  tolerance: number;
+  needsRebalance: boolean;
+  maxDeviation: number;
+  currentAllocations: Record<string, number>;
+  targetAllocations: Record<string, number>;
+  moves: RebalancingMove[];
+}

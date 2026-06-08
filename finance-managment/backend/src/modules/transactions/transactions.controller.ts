@@ -1,4 +1,5 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Transaction, TransactionType } from './transaction.entity';
@@ -13,6 +14,7 @@ export class TransactionsController {
   ) {}
 
   @Post()
+  @UseGuards(AuthGuard('jwt'))
   async create(@Body() dto: {
     type: 'buy' | 'sell';
     assetId: string;
@@ -20,9 +22,10 @@ export class TransactionsController {
     price: number;
     walletId: string;
     portfolioId?: string;
-    userId: string;
+    userId?: string;
     reason?: string;
-  }) {
+  }, @Request() req: any) {
+    dto.userId = req.user.sub;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();

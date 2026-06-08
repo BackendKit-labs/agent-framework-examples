@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { WalletService } from './wallet.service';
 
 @Controller('wallets')
@@ -11,8 +12,9 @@ export class WalletController {
   }
 
   @Post()
-  async create(@Body() dto: { name: string; description?: string }) {
-    return this.walletService.create(dto);
+  @UseGuards(AuthGuard('jwt'))
+  async create(@Body() dto: { name: string; description?: string }, @Request() req: any) {
+    return this.walletService.create(dto, req.user.sub);
   }
 
   @Get(':id')
