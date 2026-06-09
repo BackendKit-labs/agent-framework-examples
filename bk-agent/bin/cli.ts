@@ -1285,9 +1285,23 @@ program
                 `\nLista los subdirectorios de "${dir}" y lee el AGENT.md de cada uno que lo tenga.` +
                 `\nDeriva las fases de desarrollo. Cada fase: nombre, descripción, criterios de verificación testables.` +
                 `\nLuego llama design_init con cwd="${dir}", nombre del proyecto, descripción y las fases derivadas.` +
-                `\nMuestra el ROADMAP creado.` +
                 `\nIMPORTANTE: NO llames design_next ni design_advance — inicializa y detente. NO delegues a otros agentes.`,
             );
+            // After runEngine (QA may have fired — that's ok), show clean roadmap from design.json directly
+            const fsInit = require('fs') as typeof import('fs');
+            const keyInit = dir.replace(/[:\\/]/g, '-').replace(/^-+/, '');
+            const designPathInit = require('path').join(require('os').homedir(), '.bk-agent', 'projects', keyInit, 'design.json');
+            if (fsInit.existsSync(designPathInit)) {
+                const state = JSON.parse(fsInit.readFileSync(designPathInit, 'utf8'));
+                const done  = state.phases.filter((p: any) => p.status === 'complete').length;
+                const lines = [`✅ Roadmap creado: ${state.project}  [${done}/${state.phases.length} fases]`, ''];
+                for (const p of state.phases) {
+                    const icon = p.status === 'complete' ? '✓' : p.status === 'in_progress' ? '◉' : p.status === 'blocked' ? '✗' : '○';
+                    lines.push(`  ${icon}  ${p.number}. ${p.name}`);
+                }
+                lines.push('', chalk.dim('Usa /spec.show.roadmap para detalles o /spec.next para comenzar la ejecución.'));
+                console.log(formatCommandOutput(lines.join('\n')));
+            }
         });
 
         // ── Show — lee archivos directamente sin coste de LLM ───────────────
