@@ -1223,9 +1223,19 @@ program
                 // ── Design phase ─────────────────────────────────────────────────
 
                 case 'prompt': {
-                    if (!subArgs) { console.log(formatCommandOutput(chalk.dim('Uso: /spec prompt <descripción del proyecto>'))); return; }
+                    if (!subArgs) { console.log(formatCommandOutput(chalk.dim('Uso: /spec prompt <descripción>  |  /spec prompt --file <ruta>'))); return; }
+                    let promptContent = subArgs;
+                    if (subArgs.startsWith('--file ')) {
+                        const filePath = subArgs.slice(7).trim();
+                        const absPath = path.isAbsolute(filePath) ? filePath : path.join(dir, filePath);
+                        try { promptContent = require('fs').readFileSync(absPath, 'utf8'); }
+                        catch { console.log(formatCommandOutput(chalk.red(`No se pudo leer: ${absPath}`))); return; }
+                    }
                     console.log(formatCommandOutput(chalk.cyan('Guardando prompt.md...')));
-                    await runEngine(`Call design_save_prompt with cwd "${dir}" and content:\n\n${subArgs}`);
+                    await runEngine(
+                        `Llama design_save_prompt con cwd="${dir}" y el siguiente contenido:\n\n${promptContent}` +
+                        `\n\nDespués de guardar, confirma brevemente que se guardó. NO llames ningún otro tool ni hagas trabajo adicional.`,
+                    );
                     break;
                 }
 
@@ -1236,7 +1246,8 @@ program
                         `Lee prompt.md en "${dir}" si existe.${hint}` +
                         `\nGenera un specification.md completo con: requisitos funcionales, contratos de API, modelos de datos, reglas de negocio, casos de uso.` +
                         `\nLuego llama design_save_docs con cwd="${dir}" y el contenido de specification.` +
-                        `\nMuestra un resumen de lo generado.`,
+                        `\nMuestra un resumen de lo generado.` +
+                        `\nIMPORTANTE: NO llames design_advance ni design_init ni design_next — solo guarda el documento y detente.`,
                     );
                     break;
                 }
@@ -1248,7 +1259,8 @@ program
                         `Lee specification.md y prompt.md en "${dir}" si existen.${hint}` +
                         `\nGenera un design.md con: arquitectura del sistema (C4 L1), stack técnico y justificación, componentes principales, flujo de datos, decisiones no obvias y sus trade-offs.` +
                         `\nLuego llama design_save_docs con cwd="${dir}" y el contenido de design.` +
-                        `\nMuestra un resumen de la arquitectura propuesta.`,
+                        `\nMuestra un resumen de la arquitectura propuesta.` +
+                        `\nIMPORTANTE: NO llames design_advance ni design_init ni design_next — solo guarda el documento y detente.`,
                     );
                     break;
                 }
@@ -1259,7 +1271,8 @@ program
                         `Lee los documentos de diseño existentes en "${dir}": specification.md, design.md, AGENT.md, roadmap.md (los que existan).` +
                         `\nDeriva las fases de desarrollo. Cada fase debe tener nombre, descripción y criterios de verificación concretos (testables).` +
                         `\nLuego llama design_init con cwd="${dir}", nombre del proyecto, descripción y las fases derivadas.` +
-                        `\nMuestra el ROADMAP creado.`,
+                        `\nMuestra el ROADMAP creado.` +
+                        `\nIMPORTANTE: NO llames design_next ni design_advance — solo inicializa el roadmap y detente.`,
                     );
                     break;
                 }
@@ -1270,15 +1283,15 @@ program
                     console.log(formatCommandOutput(chalk.cyan('Cargando instrucciones de la etapa actual...')));
                     await runEngine(
                         `Llama design_next con cwd "${dir}".` +
-                        `\nPresenta las instrucciones de la etapa actual de forma clara y concisa.` +
-                        `\nEsta es la tarea activa — trabaja en ella hasta que el usuario llame /spec advance.`,
+                        `\nMuestra las instrucciones de la etapa al usuario de forma clara.` +
+                        `\nIMPORTANTE: Solo presenta qué debe hacerse — NO empieces a implementar, NO ejecutes código, NO llames otros tools. El usuario trabajará en la etapa y llamará /spec advance cuando termine.`,
                     );
-                    // Inject sticky reminder into next user message so the LLM stays on-spec
+                    // Inject sticky reminder so the LLM stays focused but waits for user direction
                     pendingContext =
-                        `[SPEC ACTIVO — cwd: ${dir}] Estás en modo spec-driven. ` +
-                        `La etapa activa fue cargada con /spec next. Mantente enfocado en su objetivo. ` +
-                        `Usa design_status si necesitas recordar la fase. ` +
-                        `Cuando el trabajo esté completo, el usuario llamará /spec advance.`;
+                        `[SPEC ACTIVO — cwd: ${dir}] Estás en modo spec-driven. Las instrucciones de la etapa activa se mostraron arriba. ` +
+                        `Responde preguntas y ayuda al usuario en la implementación SOLO cuando el usuario lo pida explícitamente. ` +
+                        `NO avances de etapa ni llames design_advance por tu cuenta. ` +
+                        `Cuando el usuario termine, llamará /spec advance.`;
                     break;
                 }
 
