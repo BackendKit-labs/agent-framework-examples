@@ -1218,6 +1218,14 @@ program
             catch { return null; }
         };
 
+        const specReadDesign = (dir: string): any | null => {
+            const fs = require('fs') as typeof import('fs');
+            const key = dir.replace(/[/\\]$/, '').replace(/:[/\\]/g, '--').replace(/[^a-zA-Z0-9-]/g, '-');
+            const p = path.join(require('os').homedir(), '.bk-agent', 'projects', key, 'design.json');
+            if (!fs.existsSync(p)) return null;
+            try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
+        };
+
         // Switches to agentId if not already active. Does NOT clear history (design is iterative).
         const specSwitchAgent = (agentId: string): void => {
             if (currentAgentId === agentId) return;
@@ -1288,14 +1296,11 @@ program
                 `\nIMPORTANTE: NO llames design_next ni design_advance — inicializa y detente. NO delegues a otros agentes.`,
             );
             // After runEngine (QA may have fired — that's ok), show clean roadmap from design.json directly
-            const fsInit = require('fs') as typeof import('fs');
-            const keyInit = dir.replace(/[/\\]$/, '').replace(/:[/\\]/g, '--').replace(/[^a-zA-Z0-9-]/g, '-');
-            const designPathInit = require('path').join(require('os').homedir(), '.bk-agent', 'projects', keyInit, 'design.json');
-            if (fsInit.existsSync(designPathInit)) {
-                const state = JSON.parse(fsInit.readFileSync(designPathInit, 'utf8'));
-                const done  = state.phases.filter((p: any) => p.status === 'complete').length;
-                const lines = [`✅ Roadmap creado: ${state.project}  [${done}/${state.phases.length} fases]`, ''];
-                for (const p of state.phases) {
+            const stateInit = specReadDesign(dir);
+            if (stateInit) {
+                const done = stateInit.phases.filter((p: any) => p.status === 'complete').length;
+                const lines = [`✅ Roadmap creado: ${stateInit.project}  [${done}/${stateInit.phases.length} fases]`, ''];
+                for (const p of stateInit.phases) {
                     const icon = p.status === 'complete' ? '✓' : p.status === 'in_progress' ? '◉' : p.status === 'blocked' ? '✗' : '○';
                     lines.push(`  ${icon}  ${p.number}. ${p.name}`);
                 }
@@ -1326,16 +1331,11 @@ program
 
         cmdRegistry.register('/spec.show.roadmap', 'Muestra roadmap de fases — /spec.show.roadmap [fase]', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
-            // Read design.json directly — no LLM, no QA visto bueno
-            const fs = require('fs') as typeof import('fs');
-            const appName = 'bk-agent';
-            const key = dir.replace(/[/\\]$/, '').replace(/:[/\\]/g, '--').replace(/[^a-zA-Z0-9-]/g, '-');
-            const designPath = require('path').join(require('os').homedir(), `.${appName}`, 'projects', key, 'design.json');
-            if (!fs.existsSync(designPath)) {
+            const state = specReadDesign(dir);
+            if (!state) {
                 console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init para crearlo)')));
                 return;
             }
-            const state = JSON.parse(fs.readFileSync(designPath, 'utf8'));
             const faseNum = parseInt(args.trim(), 10);
             const stageIcon: Record<string, string> = { spec: '📐 SPEC', implement: '🔨 IMPLEMENT', verify: '✅ VERIFY' };
             if (faseNum && !isNaN(faseNum)) {
@@ -1418,10 +1418,24 @@ program
         cmdRegistry.register('/spec.next', 'Muestra instrucciones de la etapa actual y activa modo driving', async () => {
             const dir = specGuard(); if (!dir) return;
             specSwitchAgent('general');
+            // If in IMPLEMENT after a failed VERIFY, inject QA findings as context
+            let qaContext = '';
+            const stateNext = specReadDesign(dir);
+            if (stateNext) {
+                const phase = stateNext.phases.find((p: any) => p.number === stateNext.currentPhase);
+                if (phase?.stage === 'implement') {
+                    const qaFile = path.join(dir, `qa-phase${phase.number}.md`);
+                    const fs = require('fs') as typeof import('fs');
+                    if (fs.existsSync(qaFile)) {
+                        const qaContent = fs.readFileSync(qaFile, 'utf8').slice(0, 2000);
+                        qaContext = `\n\nHallazgos de QA (qa-phase${phase.number}.md) de la iteración anterior — el agente debe abordarlos:\n${qaContent}`;
+                    }
+                }
+            }
             console.log(formatCommandOutput(chalk.cyan('Cargando instrucciones de la etapa actual...')));
             await runEngine(
                 `Llama design_next con cwd "${dir}".` +
-                `\nMuestra las instrucciones de la etapa de forma clara.` +
+                `\nMuestra las instrucciones de la etapa de forma clara.${qaContext}` +
                 `\nIMPORTANTE: Solo presenta qué debe hacerse — NO empieces a implementar, NO ejecutes código, NO llames otros tools.`,
             );
             pendingContext =
@@ -1431,18 +1445,54 @@ program
                 `Cuando el usuario termine, llamará /spec.advance.`;
         });
 
+        cmdRegistry.register('/spec.qa', 'QA evalúa la fase actual y guarda hallazgos en qa-phase{N}.md', async () => {
+            const dir = specGuard(); if (!dir) return;
+            const state = specReadDesign(dir);
+            if (!state) { console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init primero)'))); return; }
+            const phase = state.phases.find((p: any) => p.number === state.currentPhase);
+            if (!phase) { console.log(formatCommandOutput(chalk.red('No hay fase activa'))); return; }
+            const qaFile = `qa-phase${phase.number}.md`;
+            specSwitchAgent('qa-engineer');
+            console.log(formatCommandOutput(chalk.cyan(`Evaluando Fase ${phase.number}: ${phase.name}...`)));
+            await runEngine(
+                `Evalúa la Fase ${phase.number} "${phase.name}" del proyecto en "${dir}".` +
+                `\nEtapa actual: ${phase.stage}. Criterios: ${phase.criteria?.join('; ') ?? 'ver specification.md'}.` +
+                `\nLee los archivos relevantes del proyecto (specification.md, design.md, archivos generados).` +
+                `\nGenera un reporte de calidad con: hallazgos (severidad, evidencia, recomendación), veredicto GO/NO-GO y plan de remediación priorizado.` +
+                `\nGuarda el reporte completo en "${dir}/${qaFile}" usando write_file u otra herramienta disponible.` +
+                `\nTermina con una línea clara: "VEREDICTO: GO" o "VEREDICTO: NO-GO — [razón principal]".` +
+                `\nIMPORTANTE: Solo evalúa — NO llames design_advance, design_next ni design_init.`,
+            );
+            console.log(formatCommandOutput(
+                chalk.dim(`Hallazgos guardados en ${qaFile}.`) + '\n\n' +
+                chalk.green('  /spec.advance --passed') + chalk.dim('  → fase completa, avanza a la siguiente\n') +
+                chalk.red('  /spec.advance --failed') + chalk.dim(' "notas"  → revierte a IMPLEMENT; próximo /spec.next inyecta los hallazgos'),
+            ));
+        });
+
         cmdRegistry.register('/spec.advance', 'Avanza de etapa — /spec.advance [notas] [--passed|--failed]', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
             const hasPassed = args.includes('--passed');
             const hasFailed = args.includes('--failed');
             const notes = args.replace('--passed', '').replace('--failed', '').trim() || 'Etapa completada';
+            // Guard: VERIFY requires explicit --passed or --failed
+            const stateAdv = specReadDesign(dir);
+            if (stateAdv) {
+                const phase = stateAdv.phases.find((p: any) => p.number === stateAdv.currentPhase);
+                if (phase?.stage === 'verify' && !hasPassed && !hasFailed) {
+                    console.log(formatCommandOutput(
+                        chalk.yellow('⚠  Estás en VERIFY — debés ser explícito:\n') +
+                        chalk.green('  /spec.advance --passed') + chalk.dim(' "notas"  → fase completa\n') +
+                        chalk.red('  /spec.advance --failed') + chalk.dim(' "notas"  → revierte a IMPLEMENT\n\n') +
+                        chalk.dim('Tip: usa /spec.qa para que QA evalúe y guarde los hallazgos antes de decidir.'),
+                    ));
+                    return;
+                }
+            }
             const passedStr = hasPassed ? ', passed=true' : hasFailed ? ', passed=false' : '';
-            const verifyHint = (!hasPassed && !hasFailed)
-                ? '\nNota: si estás en etapa VERIFY incluye --passed o --failed según el resultado de los tests.'
-                : '';
             console.log(formatCommandOutput(chalk.cyan(`Avanzando etapa — "${notes}"${passedStr ? `  ${passedStr.trim()}` : ''}...`)));
             await runEngine(
-                `Llama design_advance con cwd "${dir}", notes "${notes}"${passedStr}.${verifyHint}` +
+                `Llama design_advance con cwd "${dir}", notes "${notes}"${passedStr}.` +
                 `\nMuestra la etapa y fase resultante.`,
             );
             pendingContext = null;
