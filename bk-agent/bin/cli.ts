@@ -1281,11 +1281,12 @@ program
             specSwitchAgent('architecture');
             console.log(formatCommandOutput(chalk.cyan('Inicializando roadmap de fases...')));
             await runEngine(
-                `Lee los documentos en "${dir}": specification.md, design.md, AGENT.md (los que existan).` +
+                `Lee los documentos en "${dir}": specification.md, design.md (los que existan).` +
+                `\nTambién lee los archivos AGENT.md de los subdirectorios si existen (ej: todo-api/AGENT.md, todo-web/AGENT.md).` +
                 `\nDeriva las fases de desarrollo. Cada fase: nombre, descripción, criterios de verificación testables.` +
                 `\nLuego llama design_init con cwd="${dir}", nombre del proyecto, descripción y las fases derivadas.` +
                 `\nMuestra el ROADMAP creado.` +
-                `\nIMPORTANTE: NO llames design_next ni design_advance — inicializa y detente.`,
+                `\nIMPORTANTE: NO llames design_next ni design_advance — inicializa y detente. NO delegues a otros agentes.`,
             );
         });
 
@@ -1311,18 +1312,21 @@ program
 
         cmdRegistry.register('/spec.show.roadmap', 'Muestra roadmap de fases — /spec.show.roadmap [fase]', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
+            specSwitchAgent('general'); // neutral agent — avoids Architect delegating to QA
             const fase = args.trim();
             if (fase) {
                 await runEngine(
                     `Llama design_status con cwd "${dir}".` +
-                    `\nMuestra el detalle de la fase ${fase}: nombre, descripción, etapas (SPEC/IMPLEMENT/VERIFY) con su estado, y criterios de verificación.`,
+                    `\nMuestra el detalle de la fase ${fase}: nombre, descripción, etapas (SPEC/IMPLEMENT/VERIFY) con su estado, y criterios de verificación.` +
+                    `\nIMPORTANTE: Solo muestra la información — NO delegues a otros agentes.`,
                 );
             } else {
                 await runEngine(
                     `Llama design_status con cwd "${dir}".` +
                     `\nMuestra todas las fases del roadmap con progreso visual:` +
                     `\n  ✓  fases completadas   ◉  fase activa (indica en qué etapa: SPEC/IMPLEMENT/VERIFY)   ○  fases pendientes` +
-                    `\nAl final muestra: "Fase X/N — etapa ETAPA"`,
+                    `\nAl final muestra: "Fase X/N — etapa ETAPA"` +
+                    `\nIMPORTANTE: Solo muestra la información — NO delegues a otros agentes.`,
                 );
             }
         });
