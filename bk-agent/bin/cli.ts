@@ -20,6 +20,7 @@ import {
     importProject,
     setActiveProject,
     deriveProjectName,
+    buildWorkspaceContext,
     type AgentEvent,
     type AgentProfile,
     type IterationMode,
@@ -851,14 +852,26 @@ program
                 rootCtx.current = newCwd;
                 activeAppPath = newCwd;
                 headlessAllowlist.addPath(newCwd);
-                engine.updateWorkingDir(newCwd);
                 const wsConfig = await loadWorkspaces('bk-agent');
+                let activeWsEntry: (typeof wsConfig)[string] | undefined;
                 for (const [wsName, wsEntry] of Object.entries(wsConfig)) {
-                    if (wsEntry.projects.some(p => p.cwd === newCwd)) { activeWorkspaceName = wsName; break; }
+                    if (wsEntry.projects.some(p => p.cwd === newCwd)) {
+                        activeWorkspaceName = wsName;
+                        activeWsEntry = wsEntry;
+                        break;
+                    }
                 }
+                // Use commonRoot as workingDir when workspace spans multiple projects
+                const effectiveDir = activeWsEntry?.commonRoot ?? newCwd;
+                headlessAllowlist.addPath(effectiveDir);
+                engine.updateWorkingDir(effectiveDir);
                 memoryContext = await loadAppMemory(newCwd);
                 projectName = path.basename(newCwd);
-                pendingContext = `## Workspace: ${activeWorkspaceName ?? 'default'} | Project: ${projectName}\n\n${memoryContext?.sessionContent || '*(empty)*'}`;
+                if (activeWorkspaceName && activeWsEntry) {
+                    pendingContext = await buildWorkspaceContext(activeWorkspaceName, activeWsEntry, 'bk-agent');
+                } else {
+                    pendingContext = `## Project: ${projectName}\n\n${memoryContext?.sessionContent || '*(empty)*'}`;
+                }
                 await emitConfig();
             };
 
@@ -1199,14 +1212,26 @@ program
             rootCtx.current = newCwd;
             activeAppPath = newCwd;
             tuiAllowlist.addPath(newCwd);
-            engine.updateWorkingDir(newCwd);
             const wsConfig = await loadWorkspaces('bk-agent');
+            let activeWsEntry: (typeof wsConfig)[string] | undefined;
             for (const [wsName, wsEntry] of Object.entries(wsConfig)) {
-                if (wsEntry.projects.some(p => p.cwd === newCwd)) { activeWorkspaceName = wsName; break; }
+                if (wsEntry.projects.some(p => p.cwd === newCwd)) {
+                    activeWorkspaceName = wsName;
+                    activeWsEntry = wsEntry;
+                    break;
+                }
             }
+            // Use commonRoot as workingDir when workspace spans multiple projects
+            const effectiveDir = activeWsEntry?.commonRoot ?? newCwd;
+            tuiAllowlist.addPath(effectiveDir);
+            engine.updateWorkingDir(effectiveDir);
             memoryContext = await loadAppMemory(newCwd);
             projectName = path.basename(newCwd);
-            pendingContext = `## Workspace: ${activeWorkspaceName ?? 'default'} | Project: ${projectName}\n\n${memoryContext?.sessionContent || '*(empty)*'}`;
+            if (activeWorkspaceName && activeWsEntry) {
+                pendingContext = await buildWorkspaceContext(activeWorkspaceName, activeWsEntry, 'bk-agent');
+            } else {
+                pendingContext = `## Project: ${projectName}\n\n${memoryContext?.sessionContent || '*(empty)*'}`;
+            }
             updateHeaderCallback();
             // onRenderHeader() only fires on scroll — force immediate redraw inline
             // so the user sees updated workspace/project in the current output stream
