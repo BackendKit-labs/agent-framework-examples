@@ -1312,22 +1312,43 @@ program
 
         cmdRegistry.register('/spec.show.roadmap', 'Muestra roadmap de fases — /spec.show.roadmap [fase]', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
-            specSwitchAgent('general'); // neutral agent — avoids Architect delegating to QA
-            const fase = args.trim();
-            if (fase) {
-                await runEngine(
-                    `Llama design_status con cwd "${dir}".` +
-                    `\nMuestra el detalle de la fase ${fase}: nombre, descripción, etapas (SPEC/IMPLEMENT/VERIFY) con su estado, y criterios de verificación.` +
-                    `\nIMPORTANTE: Solo muestra la información — NO delegues a otros agentes.`,
-                );
+            // Read design.json directly — no LLM, no QA visto bueno
+            const fs = require('fs') as typeof import('fs');
+            const appName = 'bk-agent';
+            const key = dir.replace(/[:\\/]/g, '-').replace(/^-+/, '');
+            const designPath = require('path').join(require('os').homedir(), `.${appName}`, 'projects', key, 'design.json');
+            if (!fs.existsSync(designPath)) {
+                console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init para crearlo)')));
+                return;
+            }
+            const state = JSON.parse(fs.readFileSync(designPath, 'utf8'));
+            const faseNum = parseInt(args.trim(), 10);
+            const stageIcon: Record<string, string> = { spec: '📐 SPEC', implement: '🔨 IMPLEMENT', verify: '✅ VERIFY' };
+            if (faseNum && !isNaN(faseNum)) {
+                const p = state.phases.find((ph: any) => ph.number === faseNum);
+                if (!p) { console.log(formatCommandOutput(chalk.red(`Fase ${faseNum} no encontrada`))); return; }
+                const icon = p.status === 'complete' ? '✓' : p.status === 'in_progress' ? '◉' : p.status === 'blocked' ? '✗' : '○';
+                const lines = [
+                    `${icon}  Fase ${p.number}/${state.phases.length}: ${p.name}  [${p.status}${p.status === 'in_progress' ? ' / ' + (stageIcon[p.stage] ?? p.stage) : ''}]`,
+                    '',
+                    p.description,
+                ];
+                if (p.criteria?.length) { lines.push('', 'Criterios:'); p.criteria.forEach((c: string) => lines.push(`  - ${c}`)); }
+                if (p.log?.length)     { lines.push('', 'Log:');       p.log.slice(-3).forEach((l: string) => lines.push(`  ${l}`)); }
+                console.log(formatCommandOutput(lines.join('\n')));
             } else {
-                await runEngine(
-                    `Llama design_status con cwd "${dir}".` +
-                    `\nMuestra todas las fases del roadmap con progreso visual:` +
-                    `\n  ✓  fases completadas   ◉  fase activa (indica en qué etapa: SPEC/IMPLEMENT/VERIFY)   ○  fases pendientes` +
-                    `\nAl final muestra: "Fase X/N — etapa ETAPA"` +
-                    `\nIMPORTANTE: Solo muestra la información — NO delegues a otros agentes.`,
-                );
+                const done  = state.phases.filter((p: any) => p.status === 'complete').length;
+                const total = state.phases.length;
+                const cur   = state.phases.find((p: any) => p.number === state.currentPhase);
+                const lines = [`${state.project}  [${done}/${total}]`, ''];
+                for (const p of state.phases) {
+                    const icon = p.status === 'complete' ? '✓' : p.status === 'in_progress' ? '◉' : p.status === 'blocked' ? '✗' : '○';
+                    const tag  = p.status === 'in_progress' ? `  ${stageIcon[p.stage] ?? p.stage}` : '';
+                    lines.push(`  ${icon}  ${p.number}. ${p.name}${tag}`);
+                }
+                if (cur && done < total) lines.push('', `Fase ${cur.number}/${total} — ${stageIcon[cur.stage] ?? cur.stage}`);
+                else if (done === total) lines.push('', '✅ Todas las fases completas');
+                console.log(formatCommandOutput(lines.join('\n')));
             }
         });
 
