@@ -1449,7 +1449,7 @@ program
                 `Cuando el usuario termine, llamará /spec.advance.`;
         });
 
-        cmdRegistry.register('/spec.run', 'General orquesta la ejecución de la etapa actual con agentes especializados', async () => {
+        cmdRegistry.register('/spec.run', 'Genera código de la fase actual — orquesta especialistas, QA entra al avanzar', async () => {
             const dir = specGuard(); if (!dir) return;
             const state = specReadDesign(dir);
             if (!state) { console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init primero)'))); return; }
@@ -1465,36 +1465,36 @@ program
                 return;
             }
 
+            // If in SPEC, advance to IMPLEMENT transparently before generating code
             if (phase.stage === 'spec') {
-                specSwitchAgent('architecture');
-                console.log(formatCommandOutput(chalk.cyan(`Escribiendo spec-phase${phase.number}.md...`)));
+                console.log(formatCommandOutput(chalk.dim('Avanzando a IMPLEMENT...')));
                 await runEngine(
-                    `Llama design_next con cwd "${dir}" para ver las instrucciones de la etapa actual.` +
-                    `\nLee también "${dir}/specification.md" y "${dir}/design.md" si existen.` +
-                    `\nEscribe el archivo "${dir}/spec-phase${phase.number}.md" con:` +
-                    `\n  - Interfaces y tipos exactos para esta fase` +
-                    `\n  - Contratos de API o componentes involucrados` +
-                    `\n  - Criterios de aceptación verificables` +
-                    `\n  - Dependencias con otras fases` +
-                    `\nMuestra un resumen de lo que escribiste.` +
-                    `\nIMPORTANTE: NO llames design_advance — solo escribe el archivo.`,
-                );
-            } else if (phase.stage === 'implement') {
-                specSwitchAgent('general');
-                console.log(formatCommandOutput(chalk.cyan(`Ejecutando Fase ${phase.number}: ${phase.name}...`)));
-                await runEngine(
-                    `Llama design_next con cwd "${dir}" para ver las instrucciones de la etapa actual.` +
-                    `\nLee también "${dir}/spec-phase${phase.number}.md" si existe.` +
-                    `\nAnaliza qué agentes especializados se necesitan según el contexto de la fase:` +
-                    `\n  - Backend (NestJS, servicios, base de datos, migraciones) → delega a Backend Dev` +
-                    `\n  - Frontend (React, componentes, hooks, estilos) → delega a Frontend Dev` +
-                    `\n  - Ambos → delega en paralelo a Backend Dev y Frontend Dev` +
-                    `\n  - Infraestructura (Docker, CI, config) → ejecuta directo` +
-                    `\nCada especialista completa su parte y reporta al General.` +
-                    `\nGeneral consolida y muestra un resumen de qué implementó cada agente.` +
-                    `\nIMPORTANTE: NO llames design_advance — el usuario decide cuándo avanzar con /spec.advance.`,
+                    `Llama design_advance con cwd "${dir}" y notes "avanzando a implementación".` +
+                    `\nIMPORTANTE: Solo llama design_advance, nada más.`,
                 );
             }
+
+            // Inject QA findings if this is a retry after a failed VERIFY
+            const fsRun = require('fs') as typeof import('fs');
+            const qaFile = path.join(dir, `qa-phase${phase.number}.md`);
+            const qaContext = fsRun.existsSync(qaFile)
+                ? `\n\nHallazgos de QA (qa-phase${phase.number}.md) que deben corregirse en esta iteración:\n${fsRun.readFileSync(qaFile, 'utf8').slice(0, 2000)}`
+                : '';
+
+            specSwitchAgent('general');
+            console.log(formatCommandOutput(chalk.cyan(`Implementando Fase ${phase.number}: ${phase.name}...`)));
+            await runEngine(
+                `Llama design_next con cwd "${dir}" para ver el contexto de la fase actual.` +
+                `\nLee "${dir}/specification.md" y "${dir}/design.md" para entender el proyecto.` +
+                `\nAnaliza qué agentes especializados se necesitan según el contexto de la fase:` +
+                `\n  - Backend (NestJS, servicios, entidades, migraciones, tests) → delega a Backend Dev` +
+                `\n  - Frontend (React, componentes, hooks, estilos, tests) → delega a Frontend Dev` +
+                `\n  - Ambos → delega en paralelo a Backend Dev y Frontend Dev` +
+                `\n  - Infraestructura (Docker, CI, scripts) → ejecuta directo` +
+                `\nCada especialista genera los archivos de código en el directorio del proyecto.` +
+                `\nGeneral consolida y muestra un resumen de qué archivos generó cada agente.${qaContext}` +
+                `\nIMPORTANTE: NO llames design_advance — cuando termines el usuario llama /spec.advance para ir a VERIFY.`,
+            );
         });
 
         cmdRegistry.register('/spec.qa', 'QA evalúa la fase actual y guarda hallazgos en qa-phase{N}.md', async () => {
