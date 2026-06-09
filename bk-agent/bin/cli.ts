@@ -1218,6 +1218,17 @@ program
             catch { return null; }
         };
 
+        // Switches to agentId if not already active. Does NOT clear history (design is iterative).
+        const specSwitchAgent = (agentId: string): void => {
+            if (currentAgentId === agentId) return;
+            const profile = allAgents.find(a => a.id === agentId);
+            if (!profile) return;
+            engine.switchAgent(profile.id);
+            currentAgentId = profile.id;
+            updateHeaderCallback();
+            console.log(formatCommandOutput(chalk.green(`✓ ${profile.icon} ${profile.name} activado`)));
+        };
+
         // ── Design phase ─────────────────────────────────────────────────────
 
         cmdRegistry.register('/spec.prompt', 'Guarda requisitos iniciales en prompt.md', async ({ args }) => {
@@ -1239,6 +1250,7 @@ program
 
         cmdRegistry.register('/spec.specify', 'Genera specification.md desde prompt.md', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
+            specSwitchAgent('architecture');
             const hint = args.trim() ? `\nFoco adicional: ${args.trim()}` : '';
             console.log(formatCommandOutput(chalk.cyan('Generando specification.md...')));
             await runEngine(
@@ -1252,6 +1264,7 @@ program
 
         cmdRegistry.register('/spec.plan', 'Genera design.md (arquitectura) desde la especificación', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
+            specSwitchAgent('architecture');
             const hint = args.trim() ? `\nFoco adicional: ${args.trim()}` : '';
             console.log(formatCommandOutput(chalk.cyan('Generando design.md...')));
             await runEngine(
@@ -1265,6 +1278,7 @@ program
 
         cmdRegistry.register('/spec.init', 'Inicializa el roadmap de fases desde los documentos de diseño', async () => {
             const dir = specGuard(); if (!dir) return;
+            specSwitchAgent('architecture');
             console.log(formatCommandOutput(chalk.cyan('Inicializando roadmap de fases...')));
             await runEngine(
                 `Lee los documentos en "${dir}": specification.md, design.md, AGENT.md (los que existan).` +
@@ -1318,6 +1332,7 @@ program
         cmdRegistry.register('/spec.revise.prompt', 'Corrige o amplía prompt.md', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
             if (!args.trim()) { console.log(formatCommandOutput(chalk.dim('Uso: /spec.revise.prompt <feedback>'))); return; }
+            specSwitchAgent('architecture');
             console.log(formatCommandOutput(chalk.cyan('Revisando prompt.md...')));
             await runEngine(
                 `Lee prompt.md en "${dir}".` +
@@ -1332,6 +1347,7 @@ program
         cmdRegistry.register('/spec.revise.specify', 'Corrige o amplía specification.md', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
             if (!args.trim()) { console.log(formatCommandOutput(chalk.dim('Uso: /spec.revise.specify <feedback>'))); return; }
+            specSwitchAgent('architecture');
             console.log(formatCommandOutput(chalk.cyan('Revisando specification.md...')));
             await runEngine(
                 `Lee specification.md en "${dir}".` +
@@ -1346,6 +1362,7 @@ program
         cmdRegistry.register('/spec.revise.plan', 'Corrige o amplía design.md', async ({ args }) => {
             const dir = specGuard(); if (!dir) return;
             if (!args.trim()) { console.log(formatCommandOutput(chalk.dim('Uso: /spec.revise.plan <feedback>'))); return; }
+            specSwitchAgent('architecture');
             console.log(formatCommandOutput(chalk.cyan('Revisando design.md...')));
             await runEngine(
                 `Lee design.md en "${dir}".` +
@@ -1361,6 +1378,7 @@ program
 
         cmdRegistry.register('/spec.next', 'Muestra instrucciones de la etapa actual y activa modo driving', async () => {
             const dir = specGuard(); if (!dir) return;
+            specSwitchAgent('general');
             console.log(formatCommandOutput(chalk.cyan('Cargando instrucciones de la etapa actual...')));
             await runEngine(
                 `Llama design_next con cwd "${dir}".` +
