@@ -1496,6 +1496,30 @@ program
                 `\nMuestra la etapa y fase resultante.`,
             );
             pendingContext = null;
+            // Auto-trigger QA when entering VERIFY stage
+            const newState = specReadDesign(dir);
+            if (newState) {
+                const newPhase = newState.phases.find((p: any) => p.number === newState.currentPhase);
+                if (newPhase?.stage === 'verify') {
+                    const qaFile = `qa-phase${newPhase.number}.md`;
+                    specSwitchAgent('qa-engineer');
+                    console.log(formatCommandOutput(chalk.cyan(`Evaluando Fase ${newPhase.number}: ${newPhase.name}...`)));
+                    await runEngine(
+                        `Evalúa la Fase ${newPhase.number} "${newPhase.name}" del proyecto en "${dir}".` +
+                        `\nEtapa actual: verify. Criterios: ${newPhase.criteria?.join('; ') ?? 'ver specification.md'}.` +
+                        `\nLee los archivos relevantes del proyecto (specification.md, design.md, archivos generados en esta fase).` +
+                        `\nGenera un reporte de calidad con: hallazgos (severidad, evidencia, recomendación), veredicto GO/NO-GO y plan de remediación priorizado.` +
+                        `\nGuarda el reporte completo en "${dir}/${qaFile}" usando write_file u otra herramienta disponible.` +
+                        `\nTermina con una línea clara: "VEREDICTO: GO" o "VEREDICTO: NO-GO — [razón principal]".` +
+                        `\nIMPORTANTE: Solo evalúa — NO llames design_advance, design_next ni design_init.`,
+                    );
+                    console.log(formatCommandOutput(
+                        chalk.dim(`Hallazgos en ${qaFile}.`) + '\n\n' +
+                        chalk.green('  /spec.advance --passed') + chalk.dim(' "notas"  → fase completa\n') +
+                        chalk.red('  /spec.advance --failed') + chalk.dim(' "notas"  → revierte a IMPLEMENT con hallazgos como contexto'),
+                    ));
+                }
+            }
         });
 
         // ── Info ─────────────────────────────────────────────────────────────
