@@ -1265,6 +1265,27 @@ program
                     break;
                 }
 
+                case 'revise': {
+                    const [target, ...feedbackParts] = subArgs.split(/\s+/);
+                    const feedback = feedbackParts.join(' ').trim();
+                    if (!target || !feedback) {
+                        console.log(formatCommandOutput(chalk.dim('Uso: /spec revise <specify|plan> <feedback>')));
+                        return;
+                    }
+                    const docName = target === 'plan' ? 'design.md' : 'specification.md';
+                    const saveKey = target === 'plan' ? 'design' : 'specification';
+                    console.log(formatCommandOutput(chalk.cyan(`Revisando ${docName}...`)));
+                    await runEngine(
+                        `Lee ${docName} en "${dir}".` +
+                        `\nEl desarrollador pide la siguiente corrección/adición:\n\n${feedback}` +
+                        `\nAplica los cambios al documento completo manteniendo todo lo que no se menciona explícitamente.` +
+                        `\nLuego llama design_save_docs con cwd="${dir}" y el contenido actualizado de ${saveKey}.` +
+                        `\nMuestra un diff resumido: qué se agregó, cambió o eliminó.` +
+                        `\nIMPORTANTE: NO llames design_advance ni design_init ni design_next — solo guarda el documento revisado y detente.`,
+                    );
+                    break;
+                }
+
                 case 'init': {
                     console.log(formatCommandOutput(chalk.cyan('Inicializando roadmap de fases...')));
                     await runEngine(
@@ -1337,8 +1358,11 @@ program
                     console.log(formatCommandOutput([
                         h('Diseño'),
                         c('/spec prompt <texto>', 'Guarda requisitos en prompt.md'),
+                        c('/spec prompt --file <ruta>', 'Carga requisitos desde un archivo'),
                         c('/spec specify [foco]', 'Genera specification.md desde prompt.md'),
                         c('/spec plan [foco]', 'Genera design.md desde la especificación'),
+                        c('/spec revise specify <feedback>', 'Corrige o amplía specification.md'),
+                        c('/spec revise plan <feedback>', 'Corrige o amplía design.md'),
                         c('/spec init', 'Inicializa el roadmap de fases (design.json + ROADMAP.md)'),
                         '',
                         h('Ejecución  (spec→implement→verify por fase)'),
