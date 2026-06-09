@@ -1197,6 +1197,150 @@ program
             await runEngine(initMsg);
         });
 
+        // ── /spec — Spec-driven development ──────────────────────────────────────
+        cmdRegistry.register('/spec', 'Spec-driven development — diseño y ejecucion por fases', async ({ args }) => {
+            if (running) { console.log(formatCommandOutput(chalk.yellow('Agente ocupado — espera antes de usar /spec.'))); return; }
+
+            const parts = args.trim().split(/\s+/);
+            const sub = parts[0] ?? '';
+            const subArgs = parts.slice(1).join(' ').trim();
+
+            // Verify design plugin is configured
+            const hasMcp = (fileConfig.mcpServers ?? []).some((s: any) => s.name === 'design');
+            if (sub !== '' && sub !== 'help' && !hasMcp) {
+                console.log(formatCommandOutput(
+                    chalk.yellow('⚠  Plugin "design" no configurado.') + '\n' +
+                    chalk.dim('Agrega en ~/.bk-agent/config.json → mcpServers:\n') +
+                    chalk.dim('  { "name": "design", "command": "node", "args": ["...dist/server.js"] }'),
+                ));
+                return;
+            }
+
+            const dir = activeAppPath;
+
+            switch (sub) {
+
+                // ── Design phase ─────────────────────────────────────────────────
+
+                case 'prompt': {
+                    if (!subArgs) { console.log(formatCommandOutput(chalk.dim('Uso: /spec prompt <descripción del proyecto>'))); return; }
+                    console.log(formatCommandOutput(chalk.cyan('Guardando prompt.md...')));
+                    await runEngine(`Call design_save_prompt with cwd "${dir}" and content:\n\n${subArgs}`);
+                    break;
+                }
+
+                case 'specify': {
+                    const hint = subArgs ? `\nFoco adicional: ${subArgs}` : '';
+                    console.log(formatCommandOutput(chalk.cyan('Generando specification.md...')));
+                    await runEngine(
+                        `Lee prompt.md en "${dir}" si existe.${hint}` +
+                        `\nGenera un specification.md completo con: requisitos funcionales, contratos de API, modelos de datos, reglas de negocio, casos de uso.` +
+                        `\nLuego llama design_save_docs con cwd="${dir}" y el contenido de specification.` +
+                        `\nMuestra un resumen de lo generado.`,
+                    );
+                    break;
+                }
+
+                case 'plan': {
+                    const hint = subArgs ? `\nFoco adicional: ${subArgs}` : '';
+                    console.log(formatCommandOutput(chalk.cyan('Generando design.md...')));
+                    await runEngine(
+                        `Lee specification.md y prompt.md en "${dir}" si existen.${hint}` +
+                        `\nGenera un design.md con: arquitectura del sistema (C4 L1), stack técnico y justificación, componentes principales, flujo de datos, decisiones no obvias y sus trade-offs.` +
+                        `\nLuego llama design_save_docs con cwd="${dir}" y el contenido de design.` +
+                        `\nMuestra un resumen de la arquitectura propuesta.`,
+                    );
+                    break;
+                }
+
+                case 'init': {
+                    console.log(formatCommandOutput(chalk.cyan('Inicializando roadmap de fases...')));
+                    await runEngine(
+                        `Lee los documentos de diseño existentes en "${dir}": specification.md, design.md, AGENT.md, roadmap.md (los que existan).` +
+                        `\nDeriva las fases de desarrollo. Cada fase debe tener nombre, descripción y criterios de verificación concretos (testables).` +
+                        `\nLuego llama design_init con cwd="${dir}", nombre del proyecto, descripción y las fases derivadas.` +
+                        `\nMuestra el ROADMAP creado.`,
+                    );
+                    break;
+                }
+
+                // ── Execution phase ──────────────────────────────────────────────
+
+                case 'next': {
+                    console.log(formatCommandOutput(chalk.cyan('Cargando instrucciones de la etapa actual...')));
+                    await runEngine(
+                        `Llama design_next con cwd "${dir}".` +
+                        `\nPresenta las instrucciones de la etapa actual de forma clara y concisa.` +
+                        `\nEsta es la tarea activa — trabaja en ella hasta que el usuario llame /spec advance.`,
+                    );
+                    // Inject sticky reminder into next user message so the LLM stays on-spec
+                    pendingContext =
+                        `[SPEC ACTIVO — cwd: ${dir}] Estás en modo spec-driven. ` +
+                        `La etapa activa fue cargada con /spec next. Mantente enfocado en su objetivo. ` +
+                        `Usa design_status si necesitas recordar la fase. ` +
+                        `Cuando el trabajo esté completo, el usuario llamará /spec advance.`;
+                    break;
+                }
+
+                case 'advance': {
+                    const hasPassed = subArgs.includes('--passed');
+                    const hasFailed = subArgs.includes('--failed');
+                    const notes = subArgs.replace('--passed', '').replace('--failed', '').trim() || 'Etapa completada';
+                    const passedStr = hasPassed ? ', passed=true' : hasFailed ? ', passed=false' : '';
+                    const verifyHint = (!hasPassed && !hasFailed)
+                        ? '\nNota: si estás en etapa VERIFY incluye --passed o --failed según el resultado de los tests.'
+                        : '';
+                    console.log(formatCommandOutput(chalk.cyan(`Avanzando etapa — "${notes}"${passedStr ? `  ${passedStr.trim()}` : ''}...`)));
+                    await runEngine(
+                        `Llama design_advance con cwd "${dir}", notes "${notes}"${passedStr}.${verifyHint}` +
+                        `\nMuestra la etapa y fase resultante.`,
+                    );
+                    pendingContext = null; // clear spec driving context after advancing
+                    break;
+                }
+
+                // ── Info ─────────────────────────────────────────────────────────
+
+                case 'status':
+                    await runEngine(`Llama design_status con cwd "${dir}" y muestra el estado del roadmap.`);
+                    break;
+
+                case 'context':
+                    await runEngine(
+                        `Llama design_read_context con cwd "${dir}".` +
+                        `\nMuestra todos los documentos de diseño y el estado de ejecución encontrados.`,
+                    );
+                    break;
+
+                case 'overview':
+                    await runEngine(`Llama design_overview y muestra el estado spec-driven de todos los proyectos conocidos.`);
+                    break;
+
+                // ── Help ─────────────────────────────────────────────────────────
+
+                default: {
+                    const h = (t: string) => chalk.bold(t);
+                    const c = (cmd: string, desc: string) => `  ${chalk.cyan(cmd.padEnd(30))}${chalk.dim(desc)}`;
+                    console.log(formatCommandOutput([
+                        h('Diseño'),
+                        c('/spec prompt <texto>', 'Guarda requisitos en prompt.md'),
+                        c('/spec specify [foco]', 'Genera specification.md desde prompt.md'),
+                        c('/spec plan [foco]', 'Genera design.md desde la especificación'),
+                        c('/spec init', 'Inicializa el roadmap de fases (design.json + ROADMAP.md)'),
+                        '',
+                        h('Ejecución  (spec→implement→verify por fase)'),
+                        c('/spec next', 'Instrucciones de la etapa actual — activa el modo driving'),
+                        c('/spec advance [notas]', 'Avanza de etapa. En VERIFY: agrega --passed o --failed'),
+                        '',
+                        h('Info'),
+                        c('/spec status', 'Estado del roadmap actual'),
+                        c('/spec context', 'Todos los documentos + estado de ejecución'),
+                        c('/spec overview', 'Vista de todos los proyectos con diseño activo'),
+                    ].join('\n')));
+                }
+            }
+        });
+
         cmdRegistry.register('/prompt', 'Genera un prompt estructurado desde una frase', async ({ args }) => {
             if (!args.startsWith('new')) {
                 console.log(formatCommandOutput(chalk.bold('📝 /prompt new <frase>') + '\n' + chalk.dim('Genera un prompt estructurado y lo guarda en prompt.md')));
