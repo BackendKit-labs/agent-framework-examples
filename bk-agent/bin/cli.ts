@@ -1289,7 +1289,7 @@ program
             );
             // After runEngine (QA may have fired — that's ok), show clean roadmap from design.json directly
             const fsInit = require('fs') as typeof import('fs');
-            const keyInit = dir.replace(/[:\\/]/g, '-').replace(/^-+/, '');
+            const keyInit = dir.replace(/[/\\]$/, '').replace(/:[/\\]/g, '--').replace(/[^a-zA-Z0-9-]/g, '-');
             const designPathInit = require('path').join(require('os').homedir(), '.bk-agent', 'projects', keyInit, 'design.json');
             if (fsInit.existsSync(designPathInit)) {
                 const state = JSON.parse(fsInit.readFileSync(designPathInit, 'utf8'));
@@ -1329,7 +1329,7 @@ program
             // Read design.json directly — no LLM, no QA visto bueno
             const fs = require('fs') as typeof import('fs');
             const appName = 'bk-agent';
-            const key = dir.replace(/[:\\/]/g, '-').replace(/^-+/, '');
+            const key = dir.replace(/[/\\]$/, '').replace(/:[/\\]/g, '--').replace(/[^a-zA-Z0-9-]/g, '-');
             const designPath = require('path').join(require('os').homedir(), `.${appName}`, 'projects', key, 'design.json');
             if (!fs.existsSync(designPath)) {
                 console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init para crearlo)')));
