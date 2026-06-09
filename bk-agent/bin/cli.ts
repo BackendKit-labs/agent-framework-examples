@@ -1198,7 +1198,14 @@ program
         });
 
         // ── /spec.* — Spec-driven development ────────────────────────────────────
-        // Returns activeAppPath if MCP plugin is active and agent is free, null otherwise
+        // Design phase — only needs an active project, no plugin required
+        const specDesignGuard = (): string | null => {
+            if (running) { console.log(formatCommandOutput(chalk.yellow('Agente ocupado.'))); return null; }
+            if (!activeAppPath) { console.log(formatCommandOutput(chalk.yellow('No hay proyecto activo.'))); return null; }
+            return activeAppPath;
+        };
+
+        // Execution phase — requires design-agent MCP plugin for state tracking
         const specGuard = (): string | null => {
             if (running) { console.log(formatCommandOutput(chalk.yellow('Agente ocupado.'))); return null; }
             const hasMcp = (fileConfig.mcpServers ?? []).some((s: any) => s.name === 'design');
@@ -1240,7 +1247,7 @@ program
         // ── Design phase ─────────────────────────────────────────────────────
 
         cmdRegistry.register('/spec.prompt', 'Guarda requisitos iniciales en prompt.md', async ({ args }) => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             if (!args.trim()) { console.log(formatCommandOutput(chalk.dim('Uso: /spec.prompt <descripción>  |  /spec.prompt --file <ruta>'))); return; }
             let content = args.trim();
             if (content.startsWith('--file ')) {
@@ -1251,36 +1258,36 @@ program
             }
             console.log(formatCommandOutput(chalk.cyan('Guardando prompt.md...')));
             await runEngine(
-                `Llama design_save_prompt con cwd="${dir}" y el siguiente contenido:\n\n${content}` +
+                `Guarda el siguiente contenido en el archivo "${dir}/prompt.md":\n\n${content}` +
                 `\n\nDespués de guardar, confirma brevemente. NO llames ningún otro tool.`,
             );
         });
 
         cmdRegistry.register('/spec.specify', 'Genera specification.md desde prompt.md', async ({ args }) => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             specSwitchAgent('architecture');
             const hint = args.trim() ? `\nFoco adicional: ${args.trim()}` : '';
             console.log(formatCommandOutput(chalk.cyan('Generando specification.md...')));
             await runEngine(
-                `Lee prompt.md en "${dir}" si existe.${hint}` +
-                `\nGenera un specification.md completo: requisitos funcionales, contratos de API, modelos de datos, reglas de negocio, casos de uso.` +
-                `\nLuego llama design_save_docs con cwd="${dir}" y el contenido de specification.` +
+                `Lee "${dir}/prompt.md" si existe.${hint}` +
+                `\nGenera una especificación completa: requisitos funcionales, contratos de API, modelos de datos, reglas de negocio, casos de uso.` +
+                `\nGuarda el resultado en "${dir}/specification.md".` +
                 `\nMuestra un resumen de lo generado.` +
-                `\nIMPORTANTE: NO llames design_advance, design_init ni design_next — guarda y detente.`,
+                `\nIMPORTANTE: Solo genera y guarda — no ejecutes ninguna otra acción.`,
             );
         });
 
         cmdRegistry.register('/spec.plan', 'Genera design.md (arquitectura) desde la especificación', async ({ args }) => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             specSwitchAgent('architecture');
             const hint = args.trim() ? `\nFoco adicional: ${args.trim()}` : '';
             console.log(formatCommandOutput(chalk.cyan('Generando design.md...')));
             await runEngine(
-                `Lee specification.md y prompt.md en "${dir}" si existen.${hint}` +
-                `\nGenera un design.md: arquitectura C4 L1, stack técnico y justificación, componentes principales, flujo de datos, decisiones no obvias y trade-offs.` +
-                `\nLuego llama design_save_docs con cwd="${dir}" y el contenido de design.` +
+                `Lee "${dir}/specification.md" y "${dir}/prompt.md" si existen.${hint}` +
+                `\nGenera un plan de arquitectura: C4 L1, stack técnico y justificación, componentes principales, flujo de datos, decisiones no obvias y trade-offs.` +
+                `\nGuarda el resultado en "${dir}/design.md".` +
                 `\nMuestra un resumen de la arquitectura propuesta.` +
-                `\nIMPORTANTE: NO llames design_advance, design_init ni design_next — guarda y detente.`,
+                `\nIMPORTANTE: Solo genera y guarda — no ejecutes ninguna otra acción.`,
             );
         });
 
@@ -1312,19 +1319,19 @@ program
         // ── Show — lee archivos directamente sin coste de LLM ───────────────
 
         cmdRegistry.register('/spec.show.prompt', 'Muestra prompt.md', async () => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             const content = specReadFile(dir, 'prompt.md');
             console.log(formatCommandOutput(content ?? chalk.dim('(prompt.md no existe — usa /spec.prompt para crearlo)')));
         });
 
         cmdRegistry.register('/spec.show.specify', 'Muestra specification.md', async () => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             const content = specReadFile(dir, 'specification.md');
             console.log(formatCommandOutput(content ?? chalk.dim('(specification.md no existe — usa /spec.specify)')));
         });
 
         cmdRegistry.register('/spec.show.plan', 'Muestra design.md (arquitectura)', async () => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             const content = specReadFile(dir, 'design.md');
             console.log(formatCommandOutput(content ?? chalk.dim('(design.md no existe — usa /spec.plan)')));
         });
@@ -1369,47 +1376,44 @@ program
         // ── Revise — itera sobre documentos existentes ───────────────────────
 
         cmdRegistry.register('/spec.revise.prompt', 'Corrige o amplía prompt.md', async ({ args }) => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             if (!args.trim()) { console.log(formatCommandOutput(chalk.dim('Uso: /spec.revise.prompt <feedback>'))); return; }
             specSwitchAgent('architecture');
             console.log(formatCommandOutput(chalk.cyan('Revisando prompt.md...')));
             await runEngine(
-                `Lee prompt.md en "${dir}".` +
+                `Lee "${dir}/prompt.md".` +
                 `\nEl desarrollador pide: ${args.trim()}` +
                 `\nAplica los cambios manteniendo todo lo que no se menciona explícitamente.` +
-                `\nLuego llama design_save_prompt con cwd="${dir}" y el contenido actualizado.` +
-                `\nMuestra qué cambió.` +
-                `\nIMPORTANTE: NO llames design_save_docs, design_advance, design_init ni design_next.`,
+                `\nGuarda el contenido actualizado en "${dir}/prompt.md".` +
+                `\nMuestra qué cambió.`,
             );
         });
 
         cmdRegistry.register('/spec.revise.specify', 'Corrige o amplía specification.md', async ({ args }) => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             if (!args.trim()) { console.log(formatCommandOutput(chalk.dim('Uso: /spec.revise.specify <feedback>'))); return; }
             specSwitchAgent('architecture');
             console.log(formatCommandOutput(chalk.cyan('Revisando specification.md...')));
             await runEngine(
-                `Lee specification.md en "${dir}".` +
+                `Lee "${dir}/specification.md".` +
                 `\nEl desarrollador pide: ${args.trim()}` +
                 `\nAplica los cambios al documento completo manteniendo todo lo que no se menciona.` +
-                `\nLuego llama design_save_docs con cwd="${dir}" y el contenido actualizado de specification.` +
-                `\nMuestra un diff resumido: qué se agregó, cambió o eliminó.` +
-                `\nIMPORTANTE: NO llames design_advance, design_init ni design_next.`,
+                `\nGuarda el contenido actualizado en "${dir}/specification.md".` +
+                `\nMuestra un diff resumido: qué se agregó, cambió o eliminó.`,
             );
         });
 
         cmdRegistry.register('/spec.revise.plan', 'Corrige o amplía design.md', async ({ args }) => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             if (!args.trim()) { console.log(formatCommandOutput(chalk.dim('Uso: /spec.revise.plan <feedback>'))); return; }
             specSwitchAgent('architecture');
             console.log(formatCommandOutput(chalk.cyan('Revisando design.md...')));
             await runEngine(
-                `Lee design.md en "${dir}".` +
+                `Lee "${dir}/design.md".` +
                 `\nEl desarrollador pide: ${args.trim()}` +
                 `\nAplica los cambios al documento completo manteniendo todo lo que no se menciona.` +
-                `\nLuego llama design_save_docs con cwd="${dir}" y el contenido actualizado de design.` +
-                `\nMuestra un diff resumido: qué se agregó, cambió o eliminó.` +
-                `\nIMPORTANTE: NO llames design_advance, design_init ni design_next.`,
+                `\nGuarda el contenido actualizado en "${dir}/design.md".` +
+                `\nMuestra un diff resumido: qué se agregó, cambió o eliminó.`,
             );
         });
 
@@ -1443,6 +1447,54 @@ program
                 `Responde preguntas y ayuda al usuario SOLO cuando lo pida explícitamente. ` +
                 `NO avances de etapa ni llames design_advance por tu cuenta. ` +
                 `Cuando el usuario termine, llamará /spec.advance.`;
+        });
+
+        cmdRegistry.register('/spec.run', 'General orquesta la ejecución de la etapa actual con agentes especializados', async () => {
+            const dir = specGuard(); if (!dir) return;
+            const state = specReadDesign(dir);
+            if (!state) { console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init primero)'))); return; }
+            const phase = state.phases.find((p: any) => p.number === state.currentPhase);
+            if (!phase) { console.log(formatCommandOutput(chalk.red('No hay fase activa'))); return; }
+
+            if (phase.stage === 'verify') {
+                console.log(formatCommandOutput(
+                    chalk.yellow('VERIFY se ejecuta automáticamente al avanzar desde IMPLEMENT.\n') +
+                    chalk.green('  /spec.advance --passed') + chalk.dim(' "notas"  → fase completa\n') +
+                    chalk.red('  /spec.advance --failed') + chalk.dim(' "notas"  → revierte a IMPLEMENT'),
+                ));
+                return;
+            }
+
+            if (phase.stage === 'spec') {
+                specSwitchAgent('architecture');
+                console.log(formatCommandOutput(chalk.cyan(`Escribiendo spec-phase${phase.number}.md...`)));
+                await runEngine(
+                    `Llama design_next con cwd "${dir}" para ver las instrucciones de la etapa actual.` +
+                    `\nLee también "${dir}/specification.md" y "${dir}/design.md" si existen.` +
+                    `\nEscribe el archivo "${dir}/spec-phase${phase.number}.md" con:` +
+                    `\n  - Interfaces y tipos exactos para esta fase` +
+                    `\n  - Contratos de API o componentes involucrados` +
+                    `\n  - Criterios de aceptación verificables` +
+                    `\n  - Dependencias con otras fases` +
+                    `\nMuestra un resumen de lo que escribiste.` +
+                    `\nIMPORTANTE: NO llames design_advance — solo escribe el archivo.`,
+                );
+            } else if (phase.stage === 'implement') {
+                specSwitchAgent('general');
+                console.log(formatCommandOutput(chalk.cyan(`Ejecutando Fase ${phase.number}: ${phase.name}...`)));
+                await runEngine(
+                    `Llama design_next con cwd "${dir}" para ver las instrucciones de la etapa actual.` +
+                    `\nLee también "${dir}/spec-phase${phase.number}.md" si existe.` +
+                    `\nAnaliza qué agentes especializados se necesitan según el contexto de la fase:` +
+                    `\n  - Backend (NestJS, servicios, base de datos, migraciones) → delega a Backend Dev` +
+                    `\n  - Frontend (React, componentes, hooks, estilos) → delega a Frontend Dev` +
+                    `\n  - Ambos → delega en paralelo a Backend Dev y Frontend Dev` +
+                    `\n  - Infraestructura (Docker, CI, config) → ejecuta directo` +
+                    `\nCada especialista completa su parte y reporta al General.` +
+                    `\nGeneral consolida y muestra un resumen de qué implementó cada agente.` +
+                    `\nIMPORTANTE: NO llames design_advance — el usuario decide cuándo avanzar con /spec.advance.`,
+                );
+            }
         });
 
         cmdRegistry.register('/spec.qa', 'QA evalúa la fase actual y guarda hallazgos en qa-phase{N}.md', async () => {
