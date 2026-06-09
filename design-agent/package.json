@@ -8,7 +8,7 @@
     "bk-design": "./dist/server.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --noCheck",
     "dev": "tsc --watch",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit"
