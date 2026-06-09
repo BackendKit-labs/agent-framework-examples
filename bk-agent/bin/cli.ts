@@ -1282,7 +1282,7 @@ program
             console.log(formatCommandOutput(chalk.cyan('Inicializando roadmap de fases...')));
             await runEngine(
                 `Lee los documentos en "${dir}": specification.md, design.md (los que existan).` +
-                `\nTambién lee los archivos AGENT.md de los subdirectorios si existen (ej: todo-api/AGENT.md, todo-web/AGENT.md).` +
+                `\nLista los subdirectorios de "${dir}" y lee el AGENT.md de cada uno que lo tenga.` +
                 `\nDeriva las fases de desarrollo. Cada fase: nombre, descripción, criterios de verificación testables.` +
                 `\nLuego llama design_init con cwd="${dir}", nombre del proyecto, descripción y las fases derivadas.` +
                 `\nMuestra el ROADMAP creado.` +
