@@ -1456,6 +1456,12 @@ program
             const phase = state.phases.find((p: any) => p.number === state.currentPhase);
             if (!phase) { console.log(formatCommandOutput(chalk.red('No hay fase activa'))); return; }
 
+            const stageLabel: Record<string, string> = { spec: '📐 SPEC', implement: '🔨 IMPLEMENT', verify: '✅ VERIFY' };
+            console.log(formatCommandOutput(
+                chalk.bold(`Fase ${phase.number}/${state.phases.length}: ${phase.name}`) +
+                chalk.dim(`  [${stageLabel[phase.stage] ?? phase.stage}]`),
+            ));
+
             if (phase.stage === 'verify') {
                 console.log(formatCommandOutput(
                     chalk.yellow('VERIFY se ejecuta automáticamente al avanzar desde IMPLEMENT.\n') +
