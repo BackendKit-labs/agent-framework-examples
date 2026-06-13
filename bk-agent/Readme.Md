@@ -233,7 +233,6 @@ bk-agent [opciones]
 |---------|-------------|
 | `/switch [ws] [proj]` | Cambiar workspace/proyecto (picker TUI) |
 | `/workspace [sub]` | Gestionar workspaces (create/add/remove/delete) |
-| `/proyectos` | Listar proyectos locales conocidos |
 | `/init` | Inicializar/analizar proyecto actual |
 
 #### Checkpoints y persistencia
