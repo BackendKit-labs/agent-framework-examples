@@ -21,10 +21,11 @@ Complete, modular documentation for the BackendKit Agent (bk-agent) — an AI co
 10. **[10-backendkit-integration.md](10-backendkit-integration.md)** — BackendKit Labs libraries integration
 11. **[11-plugins-mcp.md](11-plugins-mcp.md)** — Creating plugins and MCP extensions
 12. **[12-advanced-config.md](12-advanced-config.md)** — Advanced configuration and tuning
+13. **[15-mcp-knowledge-service-strategy.md](15-mcp-knowledge-service-strategy.md)** — Knowledge Agent as centralized MCP service
 
 ### Reference
-13. **[13-troubleshooting.md](13-troubleshooting.md)** — Common issues and solutions
-14. **[14-architecture.md](14-architecture.md)** — Internal architecture and design
+14. **[13-troubleshooting.md](13-troubleshooting.md)** — Common issues and solutions
+15. **[14-architecture.md](14-architecture.md)** — Internal architecture and design
 
 ---
 
