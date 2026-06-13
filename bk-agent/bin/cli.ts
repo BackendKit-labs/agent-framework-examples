@@ -36,10 +36,9 @@ import {
     formatToolCall,
     formatToolResult,
     formatCommandOutput,
-    formatResponseHeader,
     formatAgentHeader,
     formatAgentHeaderCompact,
-    formatSeparator,
+
     formatMarkdown,
     extractProjectName,
     formatFileDiff,
@@ -55,7 +54,7 @@ import {
     listCheckpoints, readCheckpoint, createCheckpoint, compactSession,
 } from '../src/memory/updater';
 import {
-    loadMemoryContext, listLocalProjects, getGlobalAgentsDir, getGlobalSkillsDir,
+    loadMemoryContext, getGlobalAgentsDir, getGlobalSkillsDir,
     getProjectMemoryDir, type MemoryContext,
 } from '../src/bootstrap/memory-loader';
 
@@ -124,7 +123,6 @@ function buildHelpText(skills: Skill[]): string {
         chalk.cyan('/checkpoint load <n>') + '   Cargar checkpoint',
         chalk.cyan('/init') + '                  Inicializar/analizar proyecto',
         chalk.cyan('/prompt new <frase>') + '    Generar prompt estructurado',
-        chalk.cyan('@commit') + '                Planificar y ejecutar commit',
         '',
     ];
     if (skills.length > 0) {
@@ -208,6 +206,9 @@ program
         let allowAll = false;
         let pendingInput: string | null = null;
         let pendingContext: string | null = null;
+        // Quiet flag for spec.go autonomous loop — suppresses full response text,
+        // only tool activity + recap are shown
+        let specGoActive = false;
 
         // Workspace B+ state
         let activeWorkspaceName: string | null = null;
@@ -284,13 +285,14 @@ program
             }
             if (!terminal) return;
             terminal.prepareForOutput();
-            const line = chalk.yellow('═'.repeat(60));
             messageBuffer.add({ role: 'system', content: `🧪 QA Engineer — revision automatica:\n${review.slice(0, 300)}`, timestamp: new Date(), meta: 'qa-review' });
-            console.log(`\n${line}`);
-            console.log(`  🧪  ${chalk.bold.yellow('QA Engineer')}  ${chalk.dim('· visto bueno')}`);
-            console.log(line);
-            console.log(formatMarkdown(review));
-            console.log(formatSeparator());
+            // Compact indicator — the full review is already rendered by the agent's block_end
+            const verdictMatch = review.match(/VEREDICTO:\s*(.+)/i) ?? review.match(/Verdict:\s*(.+)/i);
+            const verdict = verdictMatch ? '  ' + chalk.dim(verdictMatch[1].trim().slice(0, 70)) : '';
+            process.stdout.write(
+                chalk.dim('\n  ') + chalk.yellow('🧪') + chalk.bold.yellow('  QA Engineer') +
+                '  ' + chalk.dim('· visto bueno') + verdict + '\n'
+            );
         }
 
         // ── Transport event handler ───────────────────────────────────────────
@@ -427,21 +429,9 @@ program
                 }
                 case 'agent_switch': {
                     currentAgentId = event.to;
-                    // DelegationBus emits agent_switch with from:'orchestrator' for sub-agent
-                    // calls — those are already shown as compact ask_agent lines, skip the header
                     if ((event as any).from === 'orchestrator') return;
                     terminal?.stopThinking();
                     spinner.stop();
-                    terminal?.prepareForOutput();
-                    const cols = Math.min(process.stdout.columns || 80, 80);
-                    const line = chalk.cyan('═'.repeat(cols));
-                    const toName = event.to_name ?? event.to;
-                    const toIcon = event.to_icon ?? '🤖';
-                    const desc = chalk.dim(`· agente activo`);
-                    messageBuffer.add({ role: 'system', content: `Agente: ${toIcon} ${toName}`, timestamp: new Date(), meta: `agent:${event.to}` });
-                    console.log(`\n${line}`);
-                    console.log(`  ${toIcon}  ${chalk.bold(toName)}  ${desc}`);
-                    console.log(line);
                     updateHeaderCallback();
                     return;
                 }
@@ -481,7 +471,7 @@ program
                         const lastRecap = allRecaps[allRecaps.length - 1][1].trim();
                         showRecap(lastRecap);
                     }
-                    if (text.trim()) {
+                    if (text.trim() && !specGoActive) {
                         terminal?.prepareForOutput();
                         console.log(formatMarkdown(text));
                     }
@@ -544,12 +534,9 @@ program
         function showRecap(recap: string): void {
             if (!terminal) return;
             terminal.prepareForOutput();
-            const cols = Math.min(process.stdout.columns || 80, 80);
-            const bar = chalk.dim('┄'.repeat(cols - 2));
             messageBuffer.add({ role: 'system', content: `※ recap: ${recap}`, timestamp: new Date(), meta: 'recap' });
-            console.log(`\n${bar}`);
-            console.log(chalk.bold.magenta('  ※ ') + chalk.bold.white('recap  ') + chalk.dim('·') + '  ' + chalk.italic(recap));
-            console.log(bar);
+            const preview = recap.length > 120 ? recap.slice(0, 117) + '…' : recap;
+            process.stdout.write(chalk.dim('  ※  ') + chalk.dim.italic(preview) + '\n');
         }
 
         // ── Engine factory ────────────────────────────────────────────────────
@@ -738,14 +725,6 @@ program
                 if (s.description) lines.push(`    ${s.description}`);
             }
             emit(lines.join('\n'));
-        });
-
-        cmdRegistry.register('/proyectos', 'Listar proyectos locales conocidos', async ({ rawInput, emit }) => {
-            agentEvents.emit({ type: 'user_message', text: rawInput } as any);
-            const projects = await listLocalProjects();
-            if (!projects.length) { emit('No hay proyectos locales en ~/.deepseek-code/projects/'); return; }
-            const lines = projects.map(p => `  ${p.isCurrent ? '->' : '  '} ${p.name}${p.isCurrent ? '  <- actual' : ''}\n     ${p.memoryDir}`);
-            emit('Proyectos locales:\n\n' + lines.join('\n'));
         });
 
         cmdRegistry.register('/init', 'Inicializar o analizar proyecto con project-manager', async ({ rawInput }) => {
@@ -1227,8 +1206,8 @@ program
 
         const specReadDesign = (dir: string): any | null => {
             const fs = require('fs') as typeof import('fs');
-            const key = dir.replace(/[/\\]$/, '').replace(/:[/\\]/g, '--').replace(/[^a-zA-Z0-9-]/g, '-');
-            const p = path.join(require('os').homedir(), '.bk-agent', 'projects', key, 'design.json');
+            // Misma derivación que usa el plugin design (DesignStore) — getProjectDir del framework
+            const p = path.join(getProjectDir('bk-agent', dir), 'design.json');
             if (!fs.existsSync(p)) return null;
             try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
         };
@@ -1243,6 +1222,29 @@ program
             updateHeaderCallback();
             console.log(formatCommandOutput(chalk.green(`✓ ${profile.icon} ${profile.name} activado`)));
         };
+
+        const buildQARunPrompt = (dir: string, phase: any): string =>
+            `Evalúa la Fase ${phase.number} "${phase.name}" del proyecto en "${dir}".` +
+            `\nEtapa actual: ${phase.stage}.` +
+            `\n` +
+            `\n## Paso 1 — Criterios funcionales` +
+            `\nVerifica cada criterio con evidencia concreta (lee los archivos, ejecuta comandos):` +
+            `\n${(phase.criteria ?? ['ver specification.md']).map((c: string, i: number) => `${i + 1}. ${c}`).join('\n')}` +
+            `\n` +
+            `\n## Paso 2 — Cumplimiento de decisiones de diseño (ADRs)` +
+            `\nLee "${dir}/design.md". Identifica todas las decisiones técnicas: librerías a usar, patrones arquitectónicos, restricciones.` +
+            `\nPara cada decisión que especifique una librería o módulo:` +
+            `\n- Busca con grep/search si esa librería aparece en imports dentro de src/ (no solo en package.json).` +
+            `\n- Si design.md dice "usar X" pero X no aparece en ningún import de src/, eso es una violación grave — VEREDICTO: NO-GO.` +
+            `\n- Muestra evidencia: qué archivos la importan, o confirma que no hay ninguno.` +
+            `\n` +
+            `\n## Reporte final` +
+            `\nGuarda el reporte completo en "${dir}/qa-phase${phase.number}.md" con:` +
+            `\n- Resultado de cada criterio (✅/❌ + evidencia)` +
+            `\n- Resultado de cada ADR verificado (✅/❌ + archivos que lo cumplen o no)` +
+            `\n- Plan de remediación si hay violaciones` +
+            `\n- Última línea: "VEREDICTO: GO" o "VEREDICTO: NO-GO — [razón principal]"` +
+            `\nIMPORTANTE: Solo evalúa — NO llames design_advance, design_next ni design_init.`;
 
         // ── Design phase ─────────────────────────────────────────────────────
 
@@ -1337,7 +1339,7 @@ program
         });
 
         cmdRegistry.register('/spec.show.roadmap', 'Muestra roadmap de fases — /spec.show.roadmap [fase]', async ({ args }) => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             const state = specReadDesign(dir);
             if (!state) {
                 console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init para crearlo)')));
@@ -1504,25 +1506,16 @@ program
         });
 
         cmdRegistry.register('/spec.qa', 'QA evalúa la fase actual y guarda hallazgos en qa-phase{N}.md', async () => {
-            const dir = specGuard(); if (!dir) return;
+            const dir = specDesignGuard(); if (!dir) return;
             const state = specReadDesign(dir);
             if (!state) { console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init primero)'))); return; }
             const phase = state.phases.find((p: any) => p.number === state.currentPhase);
             if (!phase) { console.log(formatCommandOutput(chalk.red('No hay fase activa'))); return; }
-            const qaFile = `qa-phase${phase.number}.md`;
             specSwitchAgent('qa-engineer');
             console.log(formatCommandOutput(chalk.cyan(`Evaluando Fase ${phase.number}: ${phase.name}...`)));
-            await runEngine(
-                `Evalúa la Fase ${phase.number} "${phase.name}" del proyecto en "${dir}".` +
-                `\nEtapa actual: ${phase.stage}. Criterios: ${phase.criteria?.join('; ') ?? 'ver specification.md'}.` +
-                `\nLee los archivos relevantes del proyecto (specification.md, design.md, archivos generados).` +
-                `\nGenera un reporte de calidad con: hallazgos (severidad, evidencia, recomendación), veredicto GO/NO-GO y plan de remediación priorizado.` +
-                `\nGuarda el reporte completo en "${dir}/${qaFile}" usando write_file u otra herramienta disponible.` +
-                `\nTermina con una línea clara: "VEREDICTO: GO" o "VEREDICTO: NO-GO — [razón principal]".` +
-                `\nIMPORTANTE: Solo evalúa — NO llames design_advance, design_next ni design_init.`,
-            );
+            await runEngine(buildQARunPrompt(dir, phase));
             console.log(formatCommandOutput(
-                chalk.dim(`Hallazgos guardados en ${qaFile}.`) + '\n\n' +
+                chalk.dim(`Hallazgos guardados en qa-phase${phase.number}.md.`) + '\n\n' +
                 chalk.green('  /spec.advance --passed') + chalk.dim('  → fase completa, avanza a la siguiente\n') +
                 chalk.red('  /spec.advance --failed') + chalk.dim(' "notas"  → revierte a IMPLEMENT; próximo /spec.next inyecta los hallazgos'),
             ));
@@ -1559,25 +1552,196 @@ program
             if (newState) {
                 const newPhase = newState.phases.find((p: any) => p.number === newState.currentPhase);
                 if (newPhase?.stage === 'verify') {
-                    const qaFile = `qa-phase${newPhase.number}.md`;
                     specSwitchAgent('qa-engineer');
                     console.log(formatCommandOutput(chalk.cyan(`Evaluando Fase ${newPhase.number}: ${newPhase.name}...`)));
-                    await runEngine(
-                        `Evalúa la Fase ${newPhase.number} "${newPhase.name}" del proyecto en "${dir}".` +
-                        `\nEtapa actual: verify. Criterios: ${newPhase.criteria?.join('; ') ?? 'ver specification.md'}.` +
-                        `\nLee los archivos relevantes del proyecto (specification.md, design.md, archivos generados en esta fase).` +
-                        `\nGenera un reporte de calidad con: hallazgos (severidad, evidencia, recomendación), veredicto GO/NO-GO y plan de remediación priorizado.` +
-                        `\nGuarda el reporte completo en "${dir}/${qaFile}" usando write_file u otra herramienta disponible.` +
-                        `\nTermina con una línea clara: "VEREDICTO: GO" o "VEREDICTO: NO-GO — [razón principal]".` +
-                        `\nIMPORTANTE: Solo evalúa — NO llames design_advance, design_next ni design_init.`,
-                    );
+                    await runEngine(buildQARunPrompt(dir, newPhase));
                     console.log(formatCommandOutput(
-                        chalk.dim(`Hallazgos en ${qaFile}.`) + '\n\n' +
+                        chalk.dim(`Hallazgos en qa-phase${newPhase.number}.md.`) + '\n\n' +
                         chalk.green('  /spec.advance --passed') + chalk.dim(' "notas"  → fase completa\n') +
                         chalk.red('  /spec.advance --failed') + chalk.dim(' "notas"  → revierte a IMPLEMENT con hallazgos como contexto'),
                     ));
                 }
             }
+        });
+
+        cmdRegistry.register('/spec.go', 'Ejecuta todas las fases del spec de forma autónoma hasta completar', async () => {
+            const dir = specGuard(); if (!dir) return;
+            const initState = specReadDesign(dir);
+            if (!initState) { console.log(formatCommandOutput(chalk.dim('(No hay roadmap — usa /spec.init primero)'))); return; }
+
+            const fsGo = require('fs') as typeof import('fs');
+            const fsGoAsync = await import('fs/promises');
+            const MAX_RETRIES_PER_PHASE = 3;
+            const totalPhases = (initState.phases as any[]).length;
+            const projectSlug = (initState.project as string).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            // Project skills go to ~/.bk-agent/projects/{key}/skills/ — loaded by SkillLoader.loadProjectConfig()
+            const specSkillDir = path.join(getProjectDir('bk-agent', dir), 'skills');
+            const skillFilePath = path.join(specSkillDir, `${projectSlug}-conventions.yaml`);
+            let keepGoing = true;
+            specGoActive = true;
+
+            console.log(formatCommandOutput(
+                chalk.bold(`spec.go — ${initState.project}`) +
+                chalk.dim(`  ${totalPhases} fases · max ${MAX_RETRIES_PER_PHASE} reintentos/fase`),
+            ));
+
+            while (keepGoing) {
+                const current = specReadDesign(dir);
+                if (!current) break;
+
+                const allDone = (current.phases as any[]).every((p: any) => p.status === 'complete');
+                if (allDone) {
+                    console.log(formatCommandOutput(chalk.green('✅ Todas las fases completas')));
+                    break;
+                }
+
+                const phase = (current.phases as any[]).find((p: any) => p.number === current.currentPhase);
+                if (!phase || phase.status === 'complete') break;
+
+                let phaseComplete = false;
+                let retries = 0;
+
+                while (!phaseComplete && retries <= MAX_RETRIES_PER_PHASE) {
+                    // ── IMPLEMENT ────────────────────────────────────────────────────
+                    const qaFilePath = path.join(dir, `qa-phase${phase.number}.md`);
+                    const qaContext = retries > 0 && fsGo.existsSync(qaFilePath)
+                        ? `\n\nHallazgos de QA que deben corregirse:\n${fsGo.readFileSync(qaFilePath, 'utf8').slice(0, 2000)}`
+                        : '';
+                    const retryLabel = retries > 0 ? chalk.dim(` (retry ${retries}/${MAX_RETRIES_PER_PHASE})`) : '';
+
+                    console.log(formatCommandOutput(
+                        chalk.cyan(`[${phase.number}/${totalPhases}] `) + chalk.bold(phase.name) +
+                        chalk.dim('  IMPLEMENT') + retryLabel,
+                    ));
+
+                    if (phase.stage === 'spec') {
+                        await runEngine(
+                            `Llama design_advance con cwd "${dir}" y notes "avanzando a implementación".` +
+                            `\nIMPORTANTE: Solo llama design_advance, nada más.`,
+                        );
+                    }
+
+                    specSwitchAgent('general');
+                    await runEngine(
+                        `Llama design_next con cwd "${dir}" para ver el contexto de la fase actual.` +
+                        `\nLee "${dir}/specification.md" y "${dir}/design.md" para entender el proyecto.` +
+                        `\nAnaliza qué agentes se necesitan según el contexto de la fase:` +
+                        `\n  - Backend (NestJS, servicios, entidades, tests) → delega a Backend Dev` +
+                        `\n  - Frontend (React, componentes, hooks, tests) → delega a Frontend Dev` +
+                        `\n  - Ambos → delega en paralelo a Backend Dev y Frontend Dev` +
+                        `\n  - Infraestructura (Docker, CI, scripts) → ejecuta directo` +
+                        `\nCada especialista genera los archivos en "${dir}".` +
+                        `\nMuestra un resumen de qué archivos generó cada agente.${qaContext}` +
+                        `\nIMPORTANTE: NO llames design_advance.`,
+                    );
+
+                    // ── Advance IMPLEMENT → VERIFY ───────────────────────────────────
+                    await runEngine(
+                        `Llama design_advance con cwd "${dir}" y notes "implementación completada".` +
+                        `\nIMPORTANTE: Solo llama design_advance, nada más.`,
+                    );
+                    pendingContext = null;
+
+                    // ── VERIFY (QA) ──────────────────────────────────────────────────
+                    const verifyState = specReadDesign(dir);
+                    const verifyPhase = (verifyState?.phases as any[])?.find((p: any) => p.number === current.currentPhase) ?? phase;
+
+                    specSwitchAgent('qa-engineer');
+                    console.log(formatCommandOutput(
+                        chalk.cyan(`[${phase.number}/${totalPhases}] `) + chalk.bold(phase.name) + chalk.dim('  VERIFY'),
+                    ));
+                    await runEngine(buildQARunPrompt(dir, verifyPhase));
+
+                    // ── Read QA verdict ──────────────────────────────────────────────
+                    let qaVerdict: 'GO' | 'NO-GO' | 'unknown' = 'unknown';
+                    if (fsGo.existsSync(qaFilePath)) {
+                        const qaContent = fsGo.readFileSync(qaFilePath, 'utf8');
+                        if (/VEREDICTO:\s*NO-GO/i.test(qaContent)) {
+                            qaVerdict = 'NO-GO';
+                        } else if (/VEREDICTO:\s*GO/i.test(qaContent)) {
+                            qaVerdict = 'GO';
+                        }
+                    }
+
+                    specSwitchAgent('general');
+
+                    if (qaVerdict === 'GO' || qaVerdict === 'unknown') {
+                        if (qaVerdict === 'unknown') {
+                            console.log(formatCommandOutput(chalk.dim(`[${phase.number}/${totalPhases}] Sin veredicto claro — avanzando`)));
+                        } else {
+                            console.log(formatCommandOutput(chalk.green(`[${phase.number}/${totalPhases}] ✓ QA aprobó`)));
+                        }
+
+                        // ── Generate / update project skill from phase learnings ───────
+                        console.log(formatCommandOutput(chalk.dim(`[${phase.number}/${totalPhases}] Generando skill de convenciones...`)));
+                        await fsGoAsync.mkdir(specSkillDir, { recursive: true }).catch(() => {});
+                        await runEngine(
+                            `Lee los siguientes archivos del proyecto "${dir}":` +
+                            `\n- specification.md` +
+                            `\n- design.md` +
+                            `\n- qa-phase${phase.number}.md` +
+                            (fsGo.existsSync(skillFilePath) ? `\n- "${skillFilePath}" (skill existente a actualizar)` : '') +
+                            `\nExtrae SOLO convenciones y decisiones técnicas específicas de ESTE proyecto:` +
+                            `\n  - Nombres reales de módulos, entidades y servicios del proyecto` +
+                            `\n  - Patrones que el QA aprobó o rechazó en esta fase` +
+                            `\n  - Decisiones de arquitectura concretas tomadas` +
+                            `\n  - Estructura de carpetas y convenciones de archivos del proyecto` +
+                            `\nNO incluyas reglas genéricas de NestJS/React/TypeScript — solo lo específico de este proyecto.` +
+                            `\nEscribe el resultado en "${skillFilePath}" con este formato YAML exacto:` +
+                            `\nname: ${projectSlug}-conventions` +
+                            `\nversion: "1.0"` +
+                            `\ndescription: "Convenciones específicas del proyecto ${initState.project}"` +
+                            `\ntriggers: [${projectSlug}, ...otras palabras clave del dominio del proyecto]` +
+                            `\nagents:` +
+                            `\n  - backend` +
+                            `\n  - frontend` +
+                            `\nsystemPromptAddition: |` +
+                            `\n  ## Convenciones del proyecto: ${initState.project}` +
+                            `\n  [convenciones extraídas]` +
+                            `\nSi el archivo ya existe, combina el contenido acumulado con los nuevos aprendizajes sin duplicar.` +
+                            `\nIMPORTANTE: Usa write_file. No incluyas comentarios en el YAML.`,
+                        );
+
+                        // Reload UI skill count after generation
+                        allSkills = await loadSkills(skillsDir);
+                        updateHeaderCallback();
+
+                        await runEngine(
+                            `Llama design_advance con cwd "${dir}", notes "QA aprobó — fase completada", passed=true.` +
+                            `\nMuestra la etapa y fase resultante.`,
+                        );
+                        pendingContext = null;
+                        phaseComplete = true;
+                    } else {
+                        retries++;
+                        if (retries > MAX_RETRIES_PER_PHASE) {
+                            console.log(formatCommandOutput(chalk.red(`[${phase.number}/${totalPhases}] ✗ QA rechazó tras ${MAX_RETRIES_PER_PHASE} intentos — deteniendo`)));
+                            keepGoing = false;
+                            break;
+                        }
+                        console.log(formatCommandOutput(chalk.yellow(`[${phase.number}/${totalPhases}] ⚠ QA rechazó — retry ${retries}/${MAX_RETRIES_PER_PHASE}`)));
+                        await runEngine(
+                            `Llama design_advance con cwd "${dir}", notes "QA rechazó — reintentando", passed=false.` +
+                            `\nMuestra la etapa y fase resultante.`,
+                        );
+                        pendingContext = null;
+                        // Refresh phase after revert to IMPLEMENT
+                        const retryState = specReadDesign(dir);
+                        if (retryState) {
+                            const refreshed = (retryState.phases as any[]).find((p: any) => p.number === retryState.currentPhase);
+                            if (refreshed) Object.assign(phase, refreshed);
+                        }
+                    }
+                }
+
+                if (!keepGoing) break;
+            }
+
+            specGoActive = false;
+            specSwitchAgent('general');
+            console.log(formatCommandOutput(
+                chalk.dim(`spec.go finalizado — usa `) + chalk.white('/spec.show.roadmap') + chalk.dim(' para ver el estado'),
+            ));
         });
 
         // ── Info ─────────────────────────────────────────────────────────────
@@ -1766,18 +1930,6 @@ program
             console.log(formatCommandOutput(chalk.green(`✓ Checkpoint: ${args}`) + '\n' + chalk.dim(`  ${cpPath}`) + (doCompact ? '\n' + chalk.dim('  sesion-actual.md compactada') : '')));
         });
 
-        cmdRegistry.register('/proyectos', 'Listar proyectos locales conocidos', async () => {
-            const projects = await listLocalProjects();
-            if (!projects.length) { console.log(formatCommandOutput(chalk.dim('No hay proyectos locales.'))); return; }
-            const lines = [chalk.bold('💾 Proyectos locales:'), ''];
-            for (const p of projects) {
-                const marker = p.isCurrent ? chalk.green('▶ ') : '  ';
-                lines.push(marker + chalk.cyan(p.name) + (p.isCurrent ? chalk.dim('  <- actual') : ''));
-                lines.push(chalk.dim(`    ${p.memoryDir}`));
-            }
-            console.log(formatCommandOutput(lines.join('\n')));
-        });
-
         // ── Terminal setup ────────────────────────────────────────────────────
 
         const SLASH_COMMANDS = cmdRegistry.getAll().map(c => c.name);
@@ -1869,6 +2021,17 @@ program
             terminal.setOnRenderHeader(() => process.stdout.write(h));
         };
         updateHeaderCallback();
+
+        // Footer idle — estilo status bar de Claude Code: modelo · agente · tokens · ayuda
+        terminal.setFooterInfo(() => {
+            const cur = allAgents.find(a => a.id === currentAgentId);
+            const parts = [currentModel, `${cur?.icon ?? '🤖'} ${cur?.name ?? currentAgentId}`];
+            const total = sessionStats.inputTokens + sessionStats.outputTokens;
+            if (total > 0) parts.push((total / 1000).toFixed(1) + 'k tk');
+            if (liveMetrics.estimatedCostUsd) parts.push('$' + liveMetrics.estimatedCostUsd.toFixed(4));
+            parts.push('/help');
+            return parts.join(' · ');
+        });
 
         spinner.setStatusCallback((text: string) => terminal.updateStatusLine(text));
         terminal.start();
