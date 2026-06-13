@@ -1,85 +1,94 @@
-# DeepSeek Code
+# BackendKit Agent (bk-agent)
 
-Agente de codificacion CLI potenciado por DeepSeek. Sistema multi-agente con orquestacion inteligente, auto-aprendizaje, auditoria integrada y memoria persistente.
+Agente de IA especializado en **desarrollo backend con Node.js y NestJS**, integrado con librerías **BackendKit Labs**. Sistema multi-agente con orquestación inteligente, spec-driven development, auto-aprendizaje, auditoría integrada y memoria persistente.
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Node](https://img.shields.io/badge/node-%3E%3D20-green)
+![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
 ---
 
-## Indice
+## 📋 Tabla de Contenidos
 
-1. [Que es DeepSeek Code?](#que-es-deepseek-code)
-2. [Instalacion](#instalacion)
-3. [Inicio rapido](#inicio-rapido)
+1. [Qué es bk-agent?](#qué-es-bk-agent)
+2. [Instalación](#instalación)
+3. [Inicio rápido](#inicio-rápido)
 4. [Arquitectura del sistema](#arquitectura-del-sistema)
 5. [Comandos CLI](#comandos-cli)
-6. [Sesion interactiva](#sesion-interactiva)
-7. [Seleccion automatica de agentes](#seleccion-automatica-de-agentes)
-8. [Auto-aprendizaje (Reflection Engine)](#auto-aprendizaje-reflection-engine)
-9. [Auditorias multi-gate](#auditorias-multi-gate)
-10. [Manejo de contexto y memoria](#manejo-de-contexto-y-memoria)
-11. [Uso del vault de Obsidian](#uso-del-vault-de-obsidian)
-12. [Git Workflow](#git-workflow)
-13. [Configuracion](#configuracion)
-14. [Variables de entorno](#variables-de-entorno)
+6. [Spec-Driven Development](#spec-driven-development)
+7. [Gestión de Workspaces](#gestión-de-workspaces)
+8. [Sistema de Skills](#sistema-de-skills)
+9. [Agentes Especializados](#agentes-especializados)
+10. [Plugins y BackendKit Integration](#plugins-y-backendkit-integration)
+11. [Reflexión y Aprendizaje](#reflexión-y-aprendizaje)
+12. [Memoria y Persistencia](#memoria-y-persistencia)
+13. [Configuración Avanzada](#configuración-avanzada)
 
 ---
 
-## Que es DeepSeek Code?
+## Qué es bk-agent?
 
-DeepSeek Code es un **asistente de codificacion autonomo** que opera desde la terminal. No es un chat generico: entiende tu proyecto real, ejecuta herramientas como `read_file`, `write_file`, `execute_command` y `ripgrep_search`, y coordina **8 agentes especializados** con un orquestador inteligente que revisa calidad, seguridad y arquitectura antes de cada entrega.
+**bk-agent** es un asistente de codificación autónomo especializado en arquitectura backend Node.js/NestJS. No es un chat genérico: entiende tu proyecto real, ejecuta herramientas nativas (`read_file`, `write_file`, `execute_command`), orquesta **agentes especializados** y automatiza flujos completos de desarrollo con **Spec-Driven Development**.
 
 ### Capacidades clave
 
-| Capacidad | Descripcion |
+| Capacidad | Descripción |
 |-----------|-------------|
-| 8 Agentes Expertos | General, Security, Infrastructure, Architect, Data, Backend, Frontend, QA |
-| Orquestacion Multi-agente | Pipeline architecture -> security -> QA -> informe final |
-| Obsidian Vault | Busca patrones existentes antes de generar codigo nuevo |
-| Audit Reporter | Informes multi-gate con version semantica, SHA-256 y trazabilidad hallazgo -> commit |
-| Reflection Engine | Auto-aprendizaje: detecta patrones de error (>=3 ocurrencias) y los promociona a policyRules |
-| Memoria Persistente | Contexto de proyecto que sobrevive entre sesiones |
-| Git Flow Integrado | Conventional Commits con validacion automatica (tsc + tests) |
-| Skills Extensibles | Especializaciones con triggers automaticos |
+| **Spec-Driven Development** | `/spec.*` - Ciclo completo: requisitos → especificación → diseño → implementación → QA → despliegue |
+| **Múltiples Agentes** | General, Project Manager, Code Generator, QA Engineer, Architecture Reviewer, Performance Analyst |
+| **Workspaces Multi-proyecto** | Gestionar monorepos con contexto independiente por proyecto |
+| **Skills Dinámicos** | Extensiones YAML + Vault Obsidian para NestJS, TypeScript, patrones específicos |
+| **QA Automático** | Evaluación automática de código con hallazgos y recomendaciones |
+| **Reflection Engine** | Auto-aprendizaje: patrones de error → políticas automáticas |
+| **Auditoría Integrada** | Reportes multi-gate con integridad SHA-256 y trazabilidad |
+| **Memoria Persistente** | Contexto de proyecto que sobrevive entre sesiones |
+| **Integración BackendKit Labs** | Soporte nativo para Result, Circuit Breaker, Bulkhead, HTTP Client, Observability, Pipeline, Request Scanner |
 
 ---
 
-## Instalacion
+## 🚀 Instalación
 
 ### Requisitos
 
-| Requisito | Version minima | Notas |
+| Requisito | Versión mínima | Notas |
 |-----------|---------------|-------|
-| Node.js | 18+ | Requerido para ejecucion |
+| Node.js | 20+ | Requerido para ejecución |
 | npm | 9+ | Gestor de paquetes |
-| ripgrep (rg) | 13+ | Busqueda rapida en codigo |
-| PowerShell | 5.1+ | Windows (nativo) |
 | Git | 2.30+ | Control de versiones |
+| API Key DeepSeek | - | Requerido (env: `DEEPSEEK_API_KEY`) |
 
-### Desde NPM
+### Via npm
 
 ```bash
-npm install -g deepseek-code-tui
+npm install -g @backendkit-labs/agent
+```
+
+Crea los comandos:
+```bash
+bk-agent                # Comando principal
+deepseek-code          # Alias alternativo
 ```
 
 ### Desde el repositorio
 
 ```bash
 git clone <repo-url>
-cd deepseek-code
+cd bk-agent
 npm install
 npm run build
 npm link
 ```
 
-### Verificar instalacion
+### Verificar instalación
 
 ```bash
-deepseek-code --version
-# -> 0.2.0
+bk-agent --version
+# -> 1.0.0
 ```
 
 ---
 
-## Inicio rapido
+## 🎯 Inicio Rápido
 
 ### 1. Configurar API Key
 
@@ -91,738 +100,966 @@ $env:DEEPSEEK_API_KEY = "sk-..."
 export DEEPSEEK_API_KEY="sk-..."
 ```
 
-### 2. Inicializar proyecto
+### 2. Iniciar el agente
 
 ```bash
 cd mi-proyecto
-deepseek-code init --vault-path "/ruta/a/mi/vault"
+bk-agent
 ```
 
-Esto crea:
-```
-.ai-assistant/
-  config.yaml           <- Configuracion del agente
-  context.md            <- Descripcion del proyecto
-  instructions.md       <- Reglas y triggers del vault
-.obsidian-vault/
-  link.txt              <- Ruta al vault de Obsidian
-```
-
-### 3. Iniciar sesion
-
-```bash
-deepseek-code
-```
-
-### 4. Primeros comandos
+### 3. Primeros comandos
 
 ```
-> explícame la estructura del proyecto
-> /context               <- muestra el contexto cargado
-> /skills                <- lista skills disponibles
-> /tokens                <- uso del context window
+> /help                 # Ver todos los comandos
+> /init                 # Analizar o inicializar proyecto
+> /spec.prompt "descripción"  # Iniciar spec-driven flow
+> /status               # Ver estado del sistema
+> /context              # Ver contexto cargado
 ```
 
 ---
 
-## Arquitectura del sistema
+## 🏗️ Arquitectura del Sistema
 
 ### Componentes principales
 
 ```
-+------------------------------------------------------------------+
-|                     DEEPSEEK CODE CLI v0.2.0                      |
-|                                                                   |
-|  +------------+  +----------+  +-----------+  +---------------+  |
-|  |  Terminal   |  |  Agent   |  |   Tool     |  |Skill Engine   |  |
-|  |  Interactiva|<-+  Loop    |->|  Executor  |  |(load/registry)|  |
-|  +------------+  +----+-----+  +-----+-----+  +-------+-------+  |
-|                       |              |                 |          |
-|  +-----------------+  |   +---------+----------+     |          |
-|  |  Orchestrator    |<-+   |  DeepSeek Client    |     |          |
-|  |  (multi-agente)  |      |  (API DeepSeek)    |     |          |
-|  +--------+--------+      +---------+----------+     |          |
-|           |                        |                 |          |
-|  +--------+--------+    +----------+----------+  +---+--------+ |
-|  |  Audit Reporter  |    |  Reflection Engine   |  |  Vault     | |
-|  |  (informes MD)   |    |  (auto-aprendizaje) |  |  Search    | |
-|  +-----------------+    +---------------------+  +------------+ |
-|                                                                   |
-|  +-----------------+    +---------------------+                   |
-|  |  Memory System   |    |  Bootstrap / Config  |                   |
-|  |  (sesion+proyecto)|   |  (carga inicial)    |                   |
-|  +-----------------+    +---------------------+                   |
-+------------------------------------------------------------------+
-         |                        |                        |
-         v                        v                        v
-  +--------------+       +--------------+       +------------------+
-  |  Sistema de   |       |  DeepSeek API |       |  Obsidian Vault   |
-  |  Archivos     |       |  (chat/reason)|       |  (patrones/rec)   |
-  +--------------+       +--------------+       +------------------+
+┌──────────────────────────────────────────────────────────────────┐
+│                   BackendKit Agent CLI v1.0.0                     │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  Terminal         Intent/Routing       LLM Loop         Skills   │
+│  ┌─────────┐      ┌────────────┐      ┌──────────┐    ┌────────┐│
+│  │Terminal │─────→│Router      │─────→│Agent     │───→│Skill   ││
+│  │Input    │      │Command Clf │      │Loop      │    │Engine  ││
+│  └─────────┘      └────────────┘      └──────────┘    └────────┘│
+│                          ↓                    ↓                    │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │              LLM Router (select agent + model)               ││
+│  │    deepseek-chat (V3) ←→ deepseek-reasoner (R1)             ││
+│  └──────────────────────────────────────────────────────────────┘│
+│         ↓            ↓           ↓           ↓          ↓         │
+│    Workspace   Agent Select  Tool Exec    Evaluation   QA Review  │
+│                                                                   │
+│  ┌────────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐│
+│  │Workspace   │ │Orchestr. │ │Reflection│ │Audit Reporter    ││
+│  │Manager     │ │(FSM)     │ │Engine    │ │(multi-gate)      ││
+│  └────────────┘ └──────────┘ └──────────┘ └──────────────────┘│
+│                                                                   │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │         Memory System (Project + Session Persistence)        ││
+│  │  - Checkpoints   - Lessons Learned   - Audit Reports        ││
+│  └──────────────────────────────────────────────────────────────┘│
+└──────────────────────────────────────────────────────────────────┘
+       ↓                    ↓                        ↓
+  ┌──────────┐      ┌──────────────┐      ┌──────────────────┐
+  │Filesystem│      │DeepSeek API  │      │Obsidian Vault    │
+  │(code)    │      │(V3 / R1)     │      │(patterns/skills) │
+  └──────────┘      └──────────────┘      └──────────────────┘
 ```
 
-### Flujo de una peticion
+### Flujo de ejecución
 
-1. **Usuario** escribe un mensaje en la terminal
-2. **Agent Loop** recibe el input y lo pasa al **Orchestrator**
-3. **Orchestrator** ejecuta el pipeline: Intent Detection -> Domain Detection -> Risk Scoring -> Policy Engine
-4. **Seleccion de agentes**: segun dominios detectados y politicas aplicadas
-5. **Ejecucion**: el agente seleccionado usa herramientas (read_file, write_file, etc.) contra el codigo real
-6. **Gates de calidad**: si aplica, se ejecutan gates de security, architecture y/o QA
-7. **Respuesta**: se muestra al usuario con formato Markdown
+1. **Usuario** escribe mensaje o comando en terminal
+2. **Intent Detector** → ¿es comando `/` o mensaje?
+3. **Command Registry** → Si es comando, ejecutar directamente
+4. **LLM Router** → Si es mensaje, ¿a qué agente? ¿qué modelo?
+5. **Agent Selection** → Seleccionar agente + skills relevantes
+6. **Tool Loop** → LLM genera respuesta + tool calls → ejecutar → iterar
+7. **QA Review** → Si aplica, revisar automáticamente
+8. **Output** → Mostrar respuesta formateada
+9. **Reflection** → Capturar patrones, fallos, lecciones
+10. **Persistence** → Guardar en memoria del proyecto
 
 ---
 
-## Comandos CLI
+## 💬 Sistema de Comandos
 
-### `deepseek-code` - Sesion interactiva
+### Ejecutar bk-agent
 
 ```bash
-deepseek-code [opciones]
+bk-agent [opciones]
 ```
 
-| Opcion | Default | Descripcion |
+**Opciones principales:**
+
+| Opción | Default | Descripción |
 |--------|---------|-------------|
 | `-k, --api-key <key>` | `$DEEPSEEK_API_KEY` | API key de DeepSeek |
-| `-m, --model <model>` | `deepseek-chat` | Modelo a usar |
+| `-m, --model <model>` | `deepseek-chat` | Modelo: deepseek-chat \| deepseek-reasoner |
 | `-b, --base-url <url>` | API oficial | URL base alternativa |
-| `--no-vault` | - | Desactiva integracion con vault |
-| `--skill <name>` | todos activos | Activa solo un skill |
-| `--max-iterations <n>` | `100` | Limite de tool calls por turno |
-| `--iteration-mode <mode>` | `interactive` | Modo: interactive / auto / step-by-step |
-| `--command-timeout <s>` | sin limite | Timeout para execute_command |
-| `--no-stream` | - | Modo batch (sin streaming) |
-| `--no-qa` | - | Desactiva revision automatica de QA |
-| `--no-delegation` | - | Desactiva delegacion a sub-agentes |
+| `--max-iterations <n>` | `100` | Límite de tool calls por turno |
+| `--iteration-mode <mode>` | `step-by-step` | interactive \| auto \| step-by-step |
+| `--command-timeout <s>` | sin límite | Timeout para run_command |
+| `--no-stream` | - | Deshabilitar streaming |
+| `--no-qa` | - | Desactivar QA automático |
+| `--no-delegation` | - | Desactivar delegación a sub-agentes |
+| `--headless` | - | Modo headless (JSON-Lines a stdout) |
+| `-h, --help` | - | Mostrar ayuda |
+| `-v, --version` | - | Mostrar versión |
 
-### `deepseek-code init` - Inicializar proyecto
+### Comandos Slash (`/`) en sesión
 
-```bash
-deepseek-code init [--vault-path "ruta/al/vault"]
-```
+#### Control básico
 
-### `deepseek-code research <tema>` - Investigacion autonoma
-
-```bash
-deepseek-code research "Circuit Breaker pattern en NestJS"
-```
-
----
-
-## Sesion interactiva
-
-### Comandos internos (slash commands)
-
-| Comando | Descripcion |
+| Comando | Descripción |
 |---------|-------------|
 | `/help` | Muestra todos los comandos disponibles |
-| `/clear` | Limpia la pantalla y muestra el logo |
-| `/reset-context` | Reinicia la conversacion (mantiene sistema y memoria) |
-| `/context` | Muestra el contexto del proyecto |
-| `/tokens` | Uso de tokens con barra visual |
-| `/usage` | Tokens y costo estimado de sub-agentes |
-| `/skills` | Lista, instala y crea skills |
-| `/agent` | Cambia de agente especializado |
-| `/agent reload` | Recarga agentes custom desde disco |
-| `/models` | Cambia el modelo de IA (V3 / R1) |
-| `/obsidian <ruta>` | Conecta o cambia vault de Obsidian |
-| `/memoria` | Muestra memoria persistente del proyecto |
-| `/switch [proyecto]` | Cambia de proyecto (requiere vault) |
-| `/proyectos` | Lista proyectos locales conocidos |
-| `/checkpoint <nombre>` | Crea checkpoint del feature actual |
-| `/reload-files` | Recarga AGENT.md y USER.md del workspace |
-| `/iteration` | Cambia modo de iteracion en caliente |
+| `/clear` | Limpiar pantalla |
+| `/reset-context` | Reinicia conversación (mantiene sistema) |
+
+#### Contexto y estado
+
+| Comando | Descripción |
+|---------|-------------|
+| `/context` | Ver contexto activo del proyecto |
+| `/tokens` | Ver tokens de sesión actual |
+| `/usage` | Ver tokens y costo de sub-agentes |
 | `/status` | Panel completo de estado del sistema |
-| `/research <tema>` | Investiga y guarda articulo en vault |
-| `@commit` | Architecture Agent genera plan de commit + QA ejecuta |
-| `@test` | Staged -> tests -> QA -> commit automatico |
-| `salir` / `exit` | Cierra la sesion |
+| `/memory` | Ver memoria persistente del proyecto |
 
-### Herramientas del agente
+#### Configuración
 
-| Herramienta | Accion | Confirma? |
-|-------------|--------|:---------:|
-| `read_file` | Lee contenido de archivo | No |
-| `list_directory` | Lista contenido de directorio | No |
-| `ripgrep_search` | Busca patron en el codigo | No |
-| `git_diff` | Muestra cambios de git | No |
-| `vault_search` | Busca patrones en el vault | No |
-| `write_file` | Escribe o modifica archivo | Si (diff) |
-| `edit_file` | Edita archivo (reemplazo exacto) | Si (diff) |
-| `execute_command` | Ejecuta comando shell | Si (warning) |
-| `ask_agent` | Delega a sub-agente especializado | No (configurable) |
+| Comando | Descripción |
+|---------|-------------|
+| `/agent [id]` | Listar agentes \| cambiar agente activo |
+| `/models [id]` | Listar modelos \| cambiar modelo |
+| `/iteration` | Ver/cambiar modo de iteración |
+| `/skills` | Ver/instalar skills disponibles |
+
+#### Gestión de proyectos
+
+| Comando | Descripción |
+|---------|-------------|
+| `/switch [ws] [proj]` | Cambiar workspace/proyecto (picker TUI) |
+| `/workspace [sub]` | Gestionar workspaces (create/add/remove/delete) |
+| `/proyectos` | Listar proyectos locales conocidos |
+| `/init` | Inicializar/analizar proyecto actual |
+
+#### Checkpoints y persistencia
+
+| Comando | Descripción |
+|---------|-------------|
+| `/checkpoint <nombre>` | Crear checkpoint de sesión |
+| `/checkpoint list` | Listar checkpoints |
+| `/checkpoint load <n>` | Cargar checkpoint |
+
+#### Spec-Driven Development (ver [sección dedicada](#spec-driven-development))
+
+| Comando | Descripción |
+|---------|-------------|
+| `/spec.prompt <desc>` | Guardar requisitos en prompt.md |
+| `/spec.specify` | Generar specification.md |
+| `/spec.plan` | Generar design.md |
+| `/spec.init` | Crear roadmap de fases |
+| `/spec.next` | Ver instrucciones de fase actual |
+| `/spec.run` | Ejecutar generación de código |
+| `/spec.qa` | Evaluación QA de fase |
+| `/spec.advance [--passed\|--failed]` | Avanzar a siguiente fase |
+| `/spec.go` | Ejecutar todas las fases autónomamente |
+| `/spec.context` | Ver documentos de diseño |
+| `/spec.overview` | Vista de proyectos con diseño activo |
+
+#### Generación de prompts
+
+| Comando | Descripción |
+|---------|-------------|
+| `/prompt new <frase>` | Generar prompt estructurado |
 
 ---
 
-## Seleccion automatica de agentes
+## 📋 Spec-Driven Development
 
-DeepSeek Code incluye **8 agentes especializados built-in** que se activan automaticamente segun el contexto del mensaje.
+El flujo `/spec` es el sistema principal para desarrollo dirigido por especificación. Automatiza el ciclo completo desde requisitos hasta despliegue.
 
-### Los 8 agentes
+### Fases del roadmap
 
-| Agente | ID | Icono | Modelo | Disparadores (triggers) |
-|--------|----|:-----:|--------|------------------------|
-| **General** | `general` | robot | `deepseek-chat` | Default - cualquier mensaje |
-| **Security** | `security` | lock | `deepseek-reasoner` | seguridad, vulnerabilidad, jwt, oauth, autenticacion |
-| **Infrastructure** | `infrastructure` | gear | `deepseek-chat` | docker, kubernetes, terraform, ci/cd, aws |
-| **Architect** | `architecture` | building | `deepseek-reasoner` | arquitectura, ddd, microservicio, adr, c4 |
-| **Data Engineer** | `data` | chart | `deepseek-chat` | sql, pipeline, spark, bigquery, machine learning |
-| **Backend** | `backend` | desktop | `deepseek-reasoner` | implementa, api, endpoint, nestjs, crud |
-| **Frontend** | `frontend` | art | `deepseek-chat` | react, vue, componente, css, tailwind |
-| **QA Engineer** | `qa-engineer` | test_tube | `deepseek-chat` | test, testing, cobertura, jest, playwright |
+```
+1. SPECIFY
+   ├─ /spec.prompt       → Guardar requisitos en prompt.md
+   ├─ /spec.specify      → Generar specification.md
+   ├─ /spec.plan         → Generar design.md
+   └─ /spec.init         → Crear roadmap
+   
+2. IMPLEMENT (repetir para cada feature)
+   ├─ /spec.next         → Ver instrucciones
+   ├─ /spec.run          → Generar código
+   └─ IMPLEMENTACIÓN COMPLETADA
+   
+3. VERIFY (QA)
+   ├─ /spec.qa           → Evaluación de QA
+   └─ Hallazgos guardados en qa-phase{N}.md
+   
+4. INTEGRATE
+   └─ Integración con rama principal
+   
+5. DEPLOY
+   └─ Despliegue a producción
 
-### Como funciona el ruteo
+[+] /spec.advance --passed   → Pasar a siguiente fase
+    /spec.advance --failed   → Revenir a IMPLEMENT (QA inyecta hallazgos)
+```
 
-1. **Deteccion textual** - El mensaje del usuario se analiza con los `triggers` de cada agente
-2. **Seleccion** - Se elige el agente con mas coincidencias. Si hay empate, gana el mas especifico
-3. **Cambio de modelo** - Si el agente requiere `deepseek-reasoner`, el modelo cambia automaticamente
-4. **Retorno** - Al terminar, se vuelve al agente `general`
+### Flujo detallado (paso a paso)
 
-### Pipeline de orquestacion
+```bash
+# FASE 1: Especificación
+/spec.prompt "API REST para gestión de usuarios con JWT y roles"
+# → Crea prompt.md
 
-El **Orchestrator** ejecuta un pipeline de 4 etapas:
+/spec.specify
+# → Lee prompt.md → genera specification.md con requirements detallados
 
-1. **Intent Detection** - Clasifica la accion (design, implement, review, test, investigate)
-2. **Domain Detection** - Identifica bounded contexts (security, backend, database, etc.)
-3. **Risk Scoring** - Calcula nivel de riesgo tecnico (low, medium, high, critical)
-4. **Policy Engine** - Aplica reglas y determina agentes/gates obligatorios
+/spec.revise.specify "agregar soporte para OAuth2"
+# → Actualizar specification.md
 
-El resultado es un `OrchestrationResult` que contiene:
-- `task` - Contexto enriquecido con dominios, riesgo y estado
-- `selectedAgents` - Agentes seleccionados con scores
-- `agentPipeline` - Pipeline secuencial (review -> implement -> verify)
-- `requiredGates` - Gates que deben pasar (qa, security, architecture)
-- `commitAllowed` - Si el commit esta permitido
+/spec.plan
+# → Lee specification.md + prompt.md → genera design.md con arquitectura
+
+/spec.init
+# → Lee design.md → genera roadmap.md con fases
+
+/spec.show.roadmap
+# → Ver todas las fases
+/spec.show.roadmap 1
+# → Ver solo fase 1
+
+# FASE 2-5: Ejecución
+/spec.next
+# → Muestra instrucciones de IMPLEMENT para fase 1
+
+/spec.run
+# → Orquesta especialistas, genera código, muestra progreso
+
+/spec.qa
+# → QA Engineer evalúa código
+# → Guarda hallazgos en qa-phase1.md
+
+/spec.advance --passed "Fase 1 completada exitosamente"
+# → Avanza a fase 2 (SPECIFY si falta, IMPLEMENT si está lista)
+
+# Si hay problemas:
+/spec.advance --failed "Falta manejo de excepciones"
+# → Revierte a IMPLEMENT
+# → Próximo /spec.next inyecta hallazgos de QA
+
+# Ejecución autónoma (todo en un comando)
+/spec.go
+# → Ejecuta todas las fases sin intervención hasta completar
+```
+
+### Documentos generados
+
+```
+proyecto/
+├── prompt.md           # Requisitos iniciales del usuario
+├── specification.md    # Especificación detallada (funcional + no-funcional)
+├── design.md          # Arquitectura, componentes, flujos
+├── roadmap.md         # Fases de implementación
+├── qa-phase1.md       # Hallazgos QA de fase 1
+├── qa-phase2.md       # Hallazgos QA de fase 2
+└── src/               # Código generado
+```
+
+### Control de calidad integrado
+
+```
+/spec.run
+    ↓
+Agentes especializados generan código
+    ↓
+QA automático valida (si --no-qa no usado)
+    ↓
+/spec.qa (manual o automático)
+    ↓
+Hallazgos guardados
+    ↓
+/spec.advance
+    ├─→ --passed   → siguiente fase
+    └─→ --failed   → revierte, inyecta hallazgos
+```
+
+---
+
+## 🤖 Agentes Especializados
+
+bk-agent incluye múltiples agentes especializados que se activan automáticamente según el contexto.
+
+### Agentes built-in
+
+| ID | Nombre | Icono | Modelo | Triggers |
+|----|----|:-----:|--------|----------|
+| `general` | General Multipropósito | 🤖 | `deepseek-chat` | Default |
+| `project-manager` | Project Manager | 📊 | `deepseek-chat` | project, init, setup, analysis |
+| `code-generator` | Code Generator | 💻 | `deepseek-reasoner` | implement, generate, code, feature |
+| `qa-engineer` | QA Engineer | 🧪 | `deepseek-chat` | test, qa, coverage, validate |
+| `architecture-reviewer` | Architecture Reviewer | 🏛️ | `deepseek-reasoner` | architecture, design, adr, pattern |
+| `performance-analyst` | Performance Analyst | 📈 | `deepseek-chat` | performance, optimize, benchmark |
+
+### Cómo funciona el routing
+
+1. **Detección de intención** - El mensaje se analiza para detectar palabras clave
+2. **Selección de agente** - Se elige el agente con mayor coincidencia
+3. **Cambio de modelo** - Si requiere `deepseek-reasoner`, cambia automáticamente
+4. **Ejecución** - El agente ejecuta la tarea
+5. **Retorno** - Vuelve a `general` después
+
+```bash
+# Ejemplos
+"generar módulo NestJS"           → code-generator (deepseek-reasoner)
+"diseñar arquitectura"             → architecture-reviewer (deepseek-reasoner)
+"crear tests para UserService"     → qa-engineer (deepseek-chat)
+"explicar el proyecto"             → project-manager (deepseek-chat)
+```
+
+### Cambiar agente activo
+
+```bash
+/agent                      # Listar disponibles
+/agent code-generator       # Cambiar a code-generator
+```
+
+**En el header se muestra:** Nombre + icono del agente actual
 
 ### Agentes personalizados
 
-Puedes crear agentes propios en:
+Ubicación: `~/.deepseek-code/agents/[id].yaml`
 
+**Formato:**
+```yaml
+id: "mi-agente"
+name: "Mi Agente Personalizado"
+icon: "⚡"
+description: "Descripción de lo que hace"
+triggers:
+  - "palabra-clave-1"
+  - "palabra-clave-2"
+profile:
+  model: "deepseek-reasoner"
+  temperature: 0.7
+  maxTokens: 8000
+systemPrompt: |
+  Instrucciones especializadas para el agente...
 ```
-~/.deepseek-code/agents/<id>.md
+
+Los agentes personalizados se fusionan con los built-in. Usar el mismo `id` los reemplaza.
+
+---
+
+## 🎯 Sistema de Skills
+
+Los **skills** son extensiones dinámicas que especialización capacidades del agente.
+
+### Tipos de skills
+
+#### 1. Skills YAML
+
+Ubicación: `~/.deepseek-code/skills/*.yaml`
+
+**Estructura:**
+```yaml
+name: "NestJS Module Generator"
+version: "1.0.0"
+description: "Genera módulos NestJS completos con decoradores"
+triggers:
+  - "nestjs"
+  - "module"
+  - "generate"
+agents:
+  - "code-generator"     # Agentes con este skill siempre activo
+systemPromptAddition: |
+  Cuando generes módulos NestJS:
+  - Usa @Module(), @Injectable(), @Controller()
+  - Implementa servicios con Result<T>
+  - Agrega observabilidad desde el inicio
+tools:
+  - name: "generate_nestjs_module"
+    description: "Genera módulo NestJS"
+    handler: "nestjs.generateModule"
 ```
 
-Formato del archivo:
+#### 2. Skills de Vault Obsidian
 
+Ubicación: `Vault/04-Recursos/Skills/SKILL.md`
+
+**Frontmatter:**
 ```yaml
 ---
-name: Mi Experto
-icon: wizard
-description: Experto en tecnologia X
-model: deepseek-reasoner
-triggers: [palabra-clave, otra-palabra]
+name: "Circuit Breaker Pattern"
+version: "1.0.0"
+description: "Patrón Circuit Breaker con clasificación de errores"
+tags:
+  - "backend"
+  - "resilience"
+  - "nestjs"
 ---
 
-## Especializacion: Mi Experto
+# Circuit Breaker Pattern
 
-Instrucciones personalizadas para el agente.
+Errores HTTP 4xx (excepto 429, 503) = negocio, NO abren circuito
+Errores HTTP 5xx, timeouts = infraestructura, SÍ abren circuito
+
+Implementación en BackendKit Labs...
 ```
 
-Los agentes personalizados se fusionan con los built-in. Si usas el mismo `id`, **reemplazan** al built-in.
+### Activación automática
+
+Los skills se activan cuando:
+- El input contiene palabras clave de `triggers`
+- El agente actual está en la lista de `agents`
+
+### Gestionar skills
+
+```bash
+/skills                         # Listar skills activos
+/skills install mi-skill        # Instalar desde vault
+/skills --reload                # Recargar skills
+```
+
+### Handlers especializados
+
+#### **NestJS Handler**
+Auto-activo con code-generator. Genera:
+- Módulos con decoradores
+- Servicios tipados con Result
+- Controllers con validación
+- Middlewares y pipes
+- Configuración de observabilidad
+
+#### **TypeScript Handler**
+Para tareas que requieren análisis de tipos:
+- Validación de tipos
+- Detección de breaking changes
+- Refactoring de interfaces
+
+#### **Builtin Handlers**
+- File operations (`read_file`, `write_file`, `list_directory`)
+- Git integration (`git_diff`, `git_log`)
+- Command execution (`execute_command`)
+- Search (`ripgrep_search`)
 
 ---
 
-## Auto-aprendizaje (Reflection Engine)
+## 📁 Gestión de Workspaces
 
-El **Reflection Engine** es el sistema de auto-mejora que convierte errores recurrentes en reglas deterministas. Implementa el patron MAPE-K (Monitor-Analyze-Plan-Execute over a Knowledge base).
+Un **workspace** contiene múltiples proyectos (monorepo).
 
-### Pipeline
+### Comandos
+
+```bash
+/workspace create mi-workspace   # Crear nuevo workspace
+/workspace add /ruta/proyecto    # Agregar proyecto existente
+/workspace list                  # Listar workspaces
+/workspace remove mi-workspace   # Remover workspace
+
+/switch                          # Picker TUI interactivo
+/switch ws-name proj-name        # Cambiar específico
+```
+
+### Estructura
 
 ```
-Feedback (incidente) -> FailureCatalog (persistencia) -> PatternDetector (>=3 ocurrencias) -> PolicyPromoter (manifest.yaml) -> PolicyEngine (prevencion futura)
+mi-workspace/
+├── proyecto-1/
+│   ├── package.json
+│   ├── specification.md
+│   ├── design.md
+│   └── src/
+├── proyecto-2/
+│   ├── package.json
+│   └── src/
+└── .bk-workspace/
+    └── workspaces.yaml          # Metadatos del workspace
 ```
 
-### Regla de oro
+Cada proyecto tiene su propia memoria, contexto y checkpoints independientes.
 
-> Si un fallo ocurre 3 veces, no debe seguir siendo decision del LLM - debe convertirse en policy.
+---
 
-### 5 dominios de captura
+## 🔄 Reflexión y Aprendizaje
 
-| Dominio | FailureTypes | Hook | Se integra en |
-|---------|:------------:|------|---------------|
-| **Audit** | 10 | `AuditHook` | `AuditReporter.completeSprint()` |
-| **Test** | 8 | `TestHook` | Test Validation Gate |
-| **Commit** | 9 | `CommitHook` | Pre-commit / commit-msg hooks |
-| **Agent** | 7 | `AgentHook` | Agent orchestrator / evaluator |
-| **Bootstrap** | 8 | `BootstrapHook` | Project initialization |
+El **Reflection Engine** aprende de fallos y patrones para mejorar automáticamente.
+
+### Pipeline de reflexión
+
+```
+Incidente Detectado
+    ↓
+FailureCatalog (registro persistente)
+    ↓
+PatternDetector (>=3 ocurrencias del mismo tipo)
+    ↓
+PolicyPromoter (convertir patrón en policy)
+    ↓
+Orquestador (aplicar policy preventiva futura)
+```
+
+**Regla de oro:** Si un fallo ocurre 3 veces, no debe seguir siendo decisión del LLM - debe convertirse en policy automática.
+
+### 5 Dominios de captura
+
+| Dominio | Ejemplos de FailureTypes | Integración |
+|---------|-------------------------|------------|
+| **audit** | LINT_ERROR, TYPE_ERROR, LOGIC_ERROR | AuditReporter |
+| **test** | TEST_FAIL, COVERAGE_LOW, TIMEOUT | Test Validation Gate |
+| **commit** | COMMIT_HOOK_FAIL, MERGE_CONFLICT | Pre-commit hooks |
+| **agent** | TOOL_FAIL, DELEGATION_FAIL | Orchestrator |
+| **bootstrap** | CONFIG_ERROR, SETUP_FAIL | Project Initialization |
 
 ### Ejemplo de ciclo completo
 
-1. **Feedback**: Security gate detecta "hardcoded_secret"
-2. **Catalog**: Se guarda en failures.json
-3. **Detector**: Ya hay 3 ocurrencias de "hardcoded_secret"
-4. **Promoter**: Se escribe policyRule en manifest.yaml
-5. **Prevention**: El orquestador ahora bloquea automaticamente cualquier tarea que involucre secretos sin gate de security
-
-### API publica
-
-```typescript
-import { ReflectionEngine } from './reflection';
-
-const engine = new ReflectionEngine({ projectRoot: process.cwd() });
-await engine.initialize();
-
-// Reportar un incidente
-await engine.reportIncident({
-  domain: 'audit',
-  failureType: 'missing_rollback',
-  severity: 'Alta',
-  dimension: 'resiliencia',
-  gate: 'qa-engineer',
-  agenteResponsable: 'backend',
-  hallazgo: 'Transaccion sin rollback en error',
-  recomendacion: 'Agregar try/catch con rollback explicito',
-  archivos: ['src/orders/create-order.ts'],
-});
-
-// Obtener estadisticas
-const stats = await engine.getStats();
-// -> { totalFailures: 42, patternsDetected: 5, policiesPromoted: 3, ... }
+```
+1. Usuario ejecuta /spec.run
+2. Code Generator genera código
+3. QA Engine detecta: "missing_error_handling"
+4. Incidente registrado en FailureCatalog
+5. Esperar 2 más...
+6. Ya hay 3 ocurrencias de "missing_error_handling"
+7. PatternDetector identifica patrón
+8. PolicyPromoter crea policy automática
+9. Próximo /spec.run: Orquestador bloquea código sin error handling
 ```
 
-### Configuracion
-
-```yaml
-# En ~/.deepseek-code/orchestrator.yaml
-reflection:
-  enabled: true
-  promotionThreshold: 3        # Ocurrencias para promover a policy
-  autoPromote: true            # Promocion automatica sin confirmacion
-  autoGenerateAdr: true        # Genera ADR automatico al promover
-  activeDomains:
-    - audit
-    - test
-    - commit
-    - agent
-    - bootstrap
-```
-
----
-
-## Auditorias multi-gate
-
-El **Audit Reporter** genera informes Markdown con version semantica y verificacion de integridad SHA-256.
-
-### Pipeline de gates
-
-1. **Architecture Gate** - Valida diseno, patrones y estructura
-2. **Security Gate** - Revisa vulnerabilidades y buenas practicas de seguridad
-3. **QA Gate** - Verifica tests, cobertura y calidad del codigo
-4. **Informe Final** - Consolidado con veredicto GO / NO-GO / NO-GO condicional
-
-### Versionado
-
-| Evento | Incremento | Ejemplo |
-|--------|:----------:|---------|
-| Gate individual | `patch` | `v1.0.0` -> `v1.0.1` |
-| Informe final | `minor` | `v1.0.0` -> `v1.1.0` |
-| Reset manual | `major` | `v1.0.0` -> `v2.0.0` |
-
-### Estructura de archivos
-
-```
-~/.deepseek-code/projects/{hash}/audits/
-  gate-architecture-v1.0.0.md
-  gate-security-v1.0.1.md
-  gate-qa-v1.0.2.md
-  informe-final-multigate-v1.1.0.md
-  pending-issues-*.md              <- Issues criticos/altos bloqueantes
-  auto-gates-2026-05-02.md         <- Reporte diario de auto-gates silenciosos
-  lecciones-aprendidas.md           <- Memo acumulativo
-  .audit-report-version.json        <- Estado del versionado
-```
-
-### Tipos de hallazgos
-
-| Severidad | Significado | Accion |
-|-----------|-------------|--------|
-| Critica | Perdida de datos, brecha de seguridad | Bloquea deploy obligatoriamente |
-| Alta | Cobertura insuficiente, sin CI/CD | Bloquea deploy hasta resolver |
-| Media | Code smells, documentacion faltante | Resolver en el sprint |
-| Baja | Mejoras cosmeticas o menores | Backlog tecnico |
-
-### Trazabilidad hallazgo -> commit
-
-Cada hallazgo puede marcarse como resuelto vinculandolo a un commit:
-
-```typescript
-await auditReporter.markFindingResolved("H-001", "abc123", "fix: add timeout to tool executor");
-```
-
-### Bloqueo de deploys (CI/CD)
-
-```typescript
-const report = await auditReporter.generateCiReport();
-if (!report.ok) {
-  console.log(report.message); // "Deploy bloqueado"
-  process.exit(1);
-}
-```
-
----
-
-## Manejo de contexto y memoria
-
-La memoria permite que DeepSeek Code recuerde el contexto del proyecto entre sesiones.
-
-### Ubicacion
-
-```
-~/.deepseek-code/projects/{hash}/
-  memory/
-    sesion-actual.md        <- Estado actual de la sesion
-    contexto-proyecto.md    <- Stack, arquitectura, convenciones
-    proyecto-log.md         <- Historial de sesiones y hitos
-    checkpoints/            <- Snapshots de estado
-  audits/                   <- Informes de auditoria
-  reflection/
-    failures.json           <- Catalogo del Reflection Engine
-```
-
-El `{hash}` se genera a partir del directorio de trabajo, aislando la memoria por proyecto.
-
-### Memoria dinamica auto-gestionada (Capa 1)
-
-Los agentes especialistas pueden dejar marcas `[memory:*]` en sus respuestas para actualizar automaticamente la memoria de sesion sin depender del agente General.
-
-Formato soportado:
-```
-[memory:feature] Nombre del feature
-[memory:progress] 75%
-[memory:issues] Issue 1 detectado
-[memory:decision] Se decidio X porque Y
-[memory:next-steps] Paso 1; Paso 2; Paso 3
-[memory:notes] Nota adicional
-```
-
-El sistema detecta estas marcas, las parsea y llama automaticamente a `updateSessionMemory()`.
-
-### Comandos de memoria
-
-| Comando | Accion |
-|---------|--------|
-| `/memoria` | Muestra la memoria persistente del proyecto activo |
-| `/checkpoint <nombre>` | Crea un checkpoint y compacta la sesion |
-| `/switch [proyecto]` | Cambia de proyecto (requiere vault) |
-| `/proyectos` | Lista proyectos locales conocidos |
-
-### Herramientas de actualizacion
-
-El sistema expone dos herramientas para actualizar la memoria:
-
-- `update_session_memory` - Actualiza feature en curso, progreso, proximos pasos, issues, decisiones
-- `update_project_context` - Actualiza stack, arquitectura, convenciones, proyectos relacionados, archivos clave
-
----
-
-## Uso del vault de Obsidian
-
-DeepSeek Code se integra con tu **vault de Obsidian** como base de conocimiento personal.
-
-### Que hace con el vault?
-
-1. **Busca patrones** antes de generar codigo - evita reinventar la rueda
-2. **Guarda investigaciones** como notas estructuradas (`/research <tema>`)
-3. **Extrae patrones reutilizables** automaticamente cuando completas una feature
-4. **Instala skills** desde el vault al sistema de skills activo
-
-### Configurar vault
+### Información estadística
 
 ```bash
-deepseek-code init --vault-path "/ruta/absoluta/a/mi/vault"
+/status                         # Ver estadísticas de reflexión
+# → Fallos detectados: 42
+# → Patrones identificados: 5
+# → Políticas promovidas: 3
+# → Lecciones aprendidas: 8
 ```
-
-O en sesion interactiva:
-
-```
-> /obsidian /ruta/absoluta/a/mi/vault
-```
-
-### Estructura esperada del vault
-
-```
-mi-vault/
-  00-Memoria-DeepSeek/        <- Memoria de proyectos (auto-gestionado)
-    contexto-activo.md
-    proyectos/
-    agentes/                  <- Agentes editables guardados aqui
-  04-Recursos/                <- Carpeta de busqueda por defecto
-    Backend/
-      Microservicios/
-      RabbitMQ/
-    Arquitectura/
-    Skills/                   <- Skills instalables desde vault
-  00-INDEX-PATRONES.md        <- Indice generado automaticamente
-```
-
-### Comportamiento de busqueda
-
-1. El agente extrae **keywords** de tu mensaje
-2. Busca archivos `.md` relevantes en `04-Recursos/`
-3. Si encuentra patrones utiles, los incluye como contexto
-4. Marca el resultado con (vault) o (generado nuevo)
-
-### VaultProvider (arquitectura desacoplada)
-
-La busqueda en el vault usa la interfaz `VaultProvider` que desacopla la fuente del vault (filesystem, mock, git, S3, API) de la logica de busqueda.
-
-Implementaciones disponibles:
-- `FileSystemVaultProvider` - Acceso a filesystem local (produccion)
-- `MockVaultProvider` - Vault en memoria para tests
-
-```typescript
-import { VaultProvider, FileSystemVaultProvider } from './vault/vault-provider';
-
-const provider = new FileSystemVaultProvider('/ruta/al/vault');
-const results = await provider.search(['**/*.md'], ['04-Recursos']);
-```
-
-### Extraccion de patrones al vault
-
-Cuando implementes codigo que sea un patron reutilizable (value objects, aggregate roots, domain errors, configuraciones genericas, clientes HTTP, etc.):
-
-1. Usa `extract_to_vault` para guardarlo en el vault
-2. La ruta debe ser dentro de `04-Recursos/` (ej: `04-Recursos/Backend/Patrones/mi-patron.md`)
-3. Incluye tags relevantes (stack, tipo de patron)
-4. NO extraer codigo especifico del negocio - solo lo generico y reutilizable
 
 ---
 
-## Git Workflow
+## 💾 Memoria y Persistencia
 
-DeepSeek Code integra Git Flow con **validacion automatica pre-commit** (Test Validation Gate).
+El agente mantiene múltiples niveles de memoria para contexto y aprendizaje.
 
-### Estructura de ramas
-
-```
-master (produccion)
-  ^ merge desde release (con tag vX.Y.Z)
-release/X.Y.Z (staging)
-  ^ merge desde develop
-develop (integracion)
-  ^ merge desde feature/* o fix/*
-feature/{iniciales}_{descripcion}_{YYYYMMDD}
-fix/{iniciales}_{descripcion}_{YYYYMMDD}
-```
-
-### Validacion automatica (Test Validation Gate)
-
-Antes de **cualquier commit**, el workflow ejecuta:
-
-1. `tsc --noEmit` - Si falla -> ABORTA
-2. `jest run` - Si falla -> ABORTA
-
-### Comandos Makefile
-
-```bash
-# Tests
-make test                    # npx jest
-make typecheck               # npx tsc --noEmit
-make test-coverage           # npx jest --coverage
-
-# Commits (auto-crea rama feature/fix)
-make commit type=feat scope=cli msg="add prompt" dev=mc
-
-# Feature explicita
-make feature type=feat scope=prompt msg="implement input" dev=mc
-
-# Bug fix
-make fix type=fix scope=prompt msg="fix input lag" dev=mc
-
-# Finalizar feature -> merge a develop
-make finish-feature dev=mc
-
-# Crear release branch
-make release type=feat scope=cli msg="bump v1.1.0" version=1.1.0
-
-# Finalizar release -> merge a master + tag + merge back
-make finish-release version=1.1.0
-```
-
-### Script PowerShell directo
-
-```powershell
-# Commit
-pwsh scripts/commit-workflow.ps1 -Type feat -Scope cli -Message "add prompt" -DeveloperInitials "mc"
-
-# Finish feature
-pwsh scripts/commit-workflow.ps1 -FinishFeature -DeveloperInitials "mc"
-
-# Finish release
-pwsh scripts/commit-workflow.ps1 -FinishRelease -Version "1.1.0"
-```
-
-### Formato de commits (Conventional Commits)
-
-```
-<tipo>(<ambito>): <descripcion imperativa>
-
-[cuerpo opcional]
-
-[footer opcional]
-```
-
-**Types:** `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `perf`, `ci`, `build`, `revert`
-
-**Scopes:** `cli`, `components`, `prompt`, `theme`, `messages`, `config`, `deps`, `infra`, `docs`, `api`, `core`, `ui`, `utils`, `types`, `styles`, `scripts`, `root`
-
----
-
-## Configuracion
-
-### Archivos de configuracion global
+### Estructura de directorios
 
 ```
 ~/.deepseek-code/
-  manifest.yaml                  <- CONFIGURACION UNIFICADA
-       (orchestrator + capabilityMatrix + policyRules + agents + skills)
-  bootstrap-state.json           <- Estado de inicializacion
-  agents/*.md                    <- Agentes personalizados
-  skills/*.yaml                  <- Skills instalados
-  scripts/*.ps1                  <- Workflow scripts
-  templates/*                    <- Templates (Makefile, etc.)
+├── projects/
+│   └── [project-hash]/
+│       ├── memory/
+│       │   ├── memory.yaml          # Contexto persistente
+│       │   ├── lessons.md           # Lecciones aprendidas
+│       │   └── checkpoints/
+│       │       ├── checkpoint-1.json
+│       │       └── checkpoint-2.json
+│       ├── audit-reports/
+│       │   ├── phase-1.md
+│       │   └── findings.yaml
+│       └── reflection/
+│           └── failures.json
+├── agents/                          # Agentes personalizados
+└── skills/                          # Skills instalados
 ```
 
-### Configuracion local del proyecto
+### Tipos de memoria
 
-```
-.ai-assistant/
-  config.yaml                    <- Configuracion del agente para este proyecto
-  context.md                     <- Descripcion del proyecto
-  instructions.md                <- Reglas y triggers personalizados
+#### 1. **Memory.yaml** (contexto del proyecto)
+```yaml
+projectName: "mi-proyecto"
+stack: ["Node.js", "NestJS", "PostgreSQL"]
+architecture: "Microservicios con Domain-Driven Design"
+conventions:
+  - "Usa Result<T> para errores de dominio"
+  - "Observabilidad desde el inicio"
+  - "Tests para lógica de negocio"
+relatedProjects:
+  - "api-gateway"
+  - "auth-service"
+keyFiles:
+  - "src/domain/entities/"
+  - "src/application/services/"
+  - "src/infrastructure/repositories/"
 ```
 
-#### `config.yaml`
+#### 2. **Lessons.md** (lecciones aprendidas)
+```markdown
+# Lecciones Aprendidas
+
+## Patrón: Error Handling
+- Siempre usar Result<T, E> en dominio
+- Mapear errores en application layer
+- Loguear con context
+
+## Antipatrón: Tight Coupling
+- Evitar inyectar concretos
+- Usar interfaces para abstracciones
+- Casos de uso dentro de services
+```
+
+#### 3. **Checkpoints** (snapshots de sesión)
+```bash
+/checkpoint save mi-checkpoint      # Guardar
+/checkpoint load mi-checkpoint      # Restaurar
+/checkpoint list                    # Listar
+```
+
+### Cargar y visualizar memoria
+
+```bash
+/memory                             # Ver memoria del proyecto activo
+/context                            # Ver contexto completo (incluye memoria)
+```
+
+**Información mostrada:**
+- Nombre del proyecto
+- Stack tecnológico
+- Convenciones
+- Archivos clave
+- Últimas lecciones aprendidas
+- Patrones detectados
+
+---
+
+## ⚙️ Configuración Avanzada
+
+### Archivo de configuración global
+
+**Ubicación:** `~/.deepseek-code/config.yaml`
 
 ```yaml
-vault:
-  path: /ruta/al/vault
-  auto_sync: true
-  auto_use: true
-  search_paths:
-    - 04-Recursos
-    - mis-patrones
+# Proveedor de IA por defecto
+defaultProvider: "deepseek"
 
-extraction:
-  enabled: true
-  trigger: on_feature_complete
-  patterns: true
-  snippets: true
-  configs: true
-  ask_before_extract: false
+# Configuración de proveedores
+providers:
+  deepseek:
+    apiKey: "${DEEPSEEK_API_KEY}"    # Puede usar variables de entorno
+    model: "deepseek-chat"           # deepseek-chat o deepseek-reasoner
+    baseUrl: "https://api.deepseek.com/v1"
 
-usage:
-  enabled: true
-  priority: vault_first         # vault_first | generate_first
-  search_before_generate: true
+# Agentes activos
+agents:
+  defaultAgentId: "general"
 
-notification:
+# Skills
+skills:
+  autoLoad: true
+  vaultPath: "${OBSIDIAN_VAULT}"
+
+# Contexto
+context:
+  maxTokensPerMessage: 8000
+  contextWindow: 64000
+  summarizeAfterTokens: 32000
+
+# Control de calidad
+qa:
   enabled: true
-  style: inline                 # inline | summary
-  emojis: true
+  autoReview: true
+
+# Delegación
+delegation:
+  enabled: true
+  maxDelegationDepth: 2
+
+# Persistencia
+memory:
+  persistCheckpoints: true
+  checkpointRetention: 10
+  auditReports: true
+```
+
+### Opciones de línea de comandos
+
+```bash
+bk-agent [opciones]
+
+Options:
+  -k, --api-key <key>            API key de DeepSeek
+  -m, --model <model>            deepseek-chat | deepseek-reasoner
+  -b, --base-url <url>           URL base alternativa
+  --max-iterations <n>           Límite de tool calls (default: 100)
+  --iteration-mode <mode>        interactive | auto | step-by-step
+  --command-timeout <s>          Timeout en segundos (0 = sin límite)
+  --no-stream                    Deshabilitar streaming
+  --no-qa                        Desactivar QA automático
+  --no-delegation                Desactivar delegación
+  --headless                     Modo headless (JSON-Lines)
+  -h, --help                     Mostrar ayuda
+  -v, --version                  Mostrar versión
+```
+
+### Modos de iteración
+
+| Modo | Confirmación | Uso |
+|------|:------------:|-----|
+| **interactive** | Confirma cada tool call | Máximo control |
+| **step-by-step** | Sin confirmación (default) | Balance entre automatización y control |
+| **auto** | Sin confirmación, ejecuta todo | Máxima velocidad |
+
+### Variables de entorno
+
+| Variable | Descripción |
+|----------|-------------|
+| `DEEPSEEK_API_KEY` | API key de DeepSeek (requerida) |
+| `OBSIDIAN_VAULT` | Path a vault de Obsidian |
+| `BK_ITERATION_MODE` | Modo de iteración por defecto |
+| `BK_MAX_ITERATIONS` | Máximo de iteraciones |
+| `BK_COMMAND_TIMEOUT` | Timeout en segundos |
+| `BK_DEBUG` | Habilitar debug logging |
+| `BK_LOG_LEVEL` | Nivel de logging (debug, info, warn, error) |
+
+---
+
+## 🔌 Plugins y BackendKit Integration
+
+### BackendKit Labs Integration
+
+El agente incluye soporte nativo para librerías BackendKit Labs:
+
+#### **@backendkit-labs/result**
+```typescript
+// Error handling tipado sin throw
+import { ok, err } from '@backendkit-labs/result';
+
+const result = ok(value);        // ✓ Éxito
+const result = err('NOT_FOUND'); // ✗ Error de dominio
+```
+
+#### **@backendkit-labs/circuit-breaker**
+```typescript
+// Clasificación automática de errores
+// HTTP 4xx (excepto 429, 503) = negocio, NO abre circuito
+// HTTP 5xx, timeouts = infraestructura, SÍ abre circuito
+```
+
+#### **@backendkit-labs/bulkhead**
+```typescript
+// Control de concurrencia - orden correcto
+Bulkhead.execute(() =>
+  CircuitBreaker.execute(() =>
+    httpCall()
+  )
+)
+```
+
+#### **@backendkit-labs/http-client**
+```typescript
+// HTTP client con circuit breaker, retry, Result
+const client = new HttpClient({ baseUrl: '...' });
+const response = await client.get('/endpoint');
+```
+
+#### **@backendkit-labs/observability**
+```typescript
+// Logging y métricas para NestJS
+// ObservabilityModule.forRoot() (primer import en AppModule)
+// BkLogger.log('msg')
+// CorrelationIdInterceptor + BkExceptionFilter en main.ts
+```
+
+#### **@backendkit-labs/pipeline**
+```typescript
+// Pipeline async type-safe
+const result = await pipe([...operations])
+  .withMode('stop-on-first' | 'collect-all')
+  .execute();
+```
+
+### Crear plugins personalizados
+
+**Estructura:**
+```
+mi-plugin/
+├── manifest.yaml
+├── handlers/
+│   ├── command-handler.ts
+│   └── tool-handler.ts
+├── skills/
+│   └── skill-1.yaml
+└── README.md
+```
+
+**manifest.yaml:**
+```yaml
+id: "mi-plugin"
+version: "1.0.0"
+name: "Mi Plugin"
+description: "Descripción"
+dependencies:
+  - "@backendkit-labs/agent-core": ">=0.22.0"
+handlers:
+  - type: "command"
+    path: "./handlers/command-handler.ts"
+skills:
+  - "./skills/skill-1.yaml"
 ```
 
 ---
 
-## Variables de entorno
+## 🛠️ Desarrollo y Contribución
 
-| Variable | Descripcion | Requerida |
-|----------|-------------|:---------:|
-| `DEEPSEEK_API_KEY` | API key de DeepSeek | Si (si no se usa `--api-key`) |
-| `DEEPSEEK_CODE_CONFIG_DIR` | Directorio de configuracion alternativo | No |
-| `USERPROFILE` (Windows) | Home del usuario (para `~/.deepseek-code/`) | No |
-| `HOME` (Linux/macOS) | Home del usuario | No |
+### Build
 
----
-
-## Estructura del proyecto
-
+```bash
+npm run build                   # TypeScript → JavaScript
+npm run build:bundle           # Bundle con esbuild
 ```
-deepseek-code/
-  bin/
-    cli.ts                        <- Entry point de la CLI
-  docs/
-    adr/                          <- Architecture Decision Records
-    c4/                           <- Diagramas C4 (Mermaid)
-    auditorias/                   <- Informes de auditoria
-  scripts/                        <- PowerShell scripts
-    commit-workflow.ps1           <- Workflow de commits
-    bootstrap.ps1                 <- Inicializacion
-    reflection-*.mjs              <- Puentes para Reflection Engine
-  skills/                         <- Skills YAML instalados
-  src/
-    agent/                        <- Sistema de agentes
-      loop.ts                     <- Bucle principal del agente
-      tool-executor.ts            <- Ejecutor de herramientas
-      profiles.ts                 <- 8 perfiles built-in
-      evaluator.ts                <- Evaluacion de respuestas
-      loader.ts                   <- Carga de agentes personalizados
-      iteration-manager.ts        <- Control de iteraciones
-      delegation-enforcer.ts      <- Enforce de delegacion
-      routing/                    <- Router de agentes
-      commit/                     <- Workflow de commits
-      qa/                         <- Servicio de QA
-      agent-loop/                 <- Modulos extraidos del loop
-    api/
-      client.ts                   <- Wrapper de OpenAI SDK
-      types.ts
-    bootstrap/                    <- Inicializacion del proyecto
-      config-loader.ts            <- Carga config.yaml
-      context-loader.ts           <- Carga context.md
-      detector.ts                 <- Detecta .ai-assistant/
-      memory-loader.ts            <- Carga memoria persistente
-      instructions-loader.ts      <- Carga instructions.md
-    config/
-      seed-config.ts              <- Seed de configuracion inicial
-    memory/
-      updater.ts                  <- Actualiza memoria persistente
-      memory-tag-parser.ts        <- Parsea marcas [memory:*]
-    orchestrator/                 <- Orquestador multi-agente
-      index.ts                    <- Clase Orchestrator
-      config-loader.ts            <- Carga YAML de orquestacion
-      domain-detector.ts          <- Detecta dominios
-      policy-engine.ts            <- Motor de politicas
-      risk-scorer.ts              <- Scoring de riesgo
-      intent-detector.ts          <- Detecta intencion
-      gate-resolver.ts            <- Resolucion de gates
-      fsm.ts                      <- Maquina de estados
-      audit-reporter.ts           <- Generador de informes
-      audit/                      <- Sub-sistemas de auditoria
-      types.ts                    <- Tipos del orquestador
-    reflection/                   <- Reflection Engine
-      types.ts                    <- Tipos base
-      failure-catalog.ts          <- Catalogo persistente
-      pattern-detector.ts         <- Detector >=3 ocurrencias
-      policy-promoter.ts          <- Escritor en manifest.yaml
-      reflection-engine.ts        <- Orquestador del engine
-      lessons-memo-generator.ts   <- Generador de lecciones
-      historical-loader.ts        <- Carga historica
-      domains/                    <- FailureTypes por dominio
-      hooks/                      <- Hooks de integracion
-    research/                     <- Investigacion autonoma
-    shared/utils/                 <- Utilidades compartidas
-    skills/                       <- Sistema de skills
-    tools/                        <- Definiciones de herramientas
-    types/                        <- Tipos del sistema
-    ui/                           <- Interfaz de terminal
-    vault/                        <- Integracion con vault
-      vault-provider.ts           <- Interfaz VaultProvider
-      search.ts                   <- Busqueda de patrones
-      extractor.ts                <- Extraccion al vault
-      index-reader.ts             <- Lector de indice
-      lru-cache.ts                <- Cache LRU
-      profiler.ts                 <- Perfilador de busqueda
-  tests/                          <- Tests del sistema
-    integration/                  <- Tests de integracion
-  manifest.yaml                   <- Configuracion unificada
-  Makefile                        <- Comandos de workflow
-  package.json                    <- Dependencias y scripts
-  AGENT.md                        <- Instrucciones del proyecto
-  USER.md                         <- Preferencias del desarrollador
+
+### Testing
+
+```bash
+npm test                        # Ejecutar tests
+npm run test:watch             # Watch mode
+npm run test:coverage          # Coverage report
+```
+
+### Linting
+
+```bash
+npm run lint                    # ESLint
+```
+
+### Scripts de desarrollo
+
+```bash
+npm run dev                     # Ejecutar con tsx (sin compilar)
+npm run update-global           # Actualizar instalación global
 ```
 
 ---
 
-## Licencia
+## 📚 Estructura del Proyecto
 
-MIT 2026 DeepSeek Code
+```
+bk-agent/
+├── bin/
+│   └── cli.ts                        # Entry point principal
+├── src/
+│   ├── agent/                        # Sistema de agentes
+│   │   ├── routing/                  # LLM router y text scoring
+│   │   ├── evaluation/               # Evaluación de código
+│   │   ├── qa/                       # Sistema de QA
+│   │   ├── commit/                   # Workflow de commits
+│   │   ├── loop.ts                   # Bucle principal
+│   │   └── ...
+│   ├── context/                      # Gestión de contexto
+│   │   ├── stages/                   # Etapas de procesamiento
+│   │   ├── history.ts                # Historial
+│   │   └── token-counter.ts          # Conteo de tokens
+│   ├── orchestrator/                 # Orquestación
+│   │   ├── fsm.ts                    # Máquina de estados
+│   │   ├── policy-engine.ts          # Motor de políticas
+│   │   ├── intent-detector.ts        # Detección de intención
+│   │   ├── audit/                    # Sistema de auditoría
+│   │   └── ...
+│   ├── reflection/                   # Motor de reflexión
+│   │   ├── domains/                  # Dominios de fallos
+│   │   ├── hooks/                    # Hooks de eventos
+│   │   ├── pattern-detector.ts
+│   │   ├── reflection-engine.ts
+│   │   └── ...
+│   ├── skills/                       # Sistema de skills
+│   │   ├── loader.ts                 # Cargador de skills
+│   │   ├── handlers/                 # Handlers (NestJS, TypeScript)
+│   │   └── builtin/                  # Skills integrados
+│   ├── memory/                       # Persistencia
+│   ├── ui/                           # Terminal y formateo
+│   ├── tools/                        # Definiciones de herramientas
+│   ├── types/                        # Tipos TypeScript
+│   └── bootstrap/                    # Inicialización
+├── docs/
+│   ├── c4/                           # Diagramas C4
+│   ├── adr/                          # Architecture Decision Records
+│   └── auditorias/                   # Reportes de auditoría
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## 📊 Métricas y Monitoreo
+
+### Estadísticas de sesión
+
+```bash
+/tokens                         # Tokens de sesión actual
+/usage                          # Tokens y costo de sub-agentes
+/status                         # Panel completo del sistema
+```
+
+**Métricas incluidas:**
+- Tokens entrada/salida
+- Costo estimado en USD
+- Tiempo de ejecución
+- Iteraciones realizadas
+- Llamadas a herramientas
+
+### Spinner de progreso
+
+El CLI incluye spinner animado que muestra:
+- Modelo actual
+- Tokens en tiempo real
+- Costo estimado
+- Tiempo transcurrido
+
+---
+
+## 🤝 Soporte y Recursos
+
+### Documentación adicional
+
+- **[C4 System Context](./docs/c4/system-context.md)** - Diagrama de contexto
+- **[C4 Containers](./docs/c4/containers.md)** - Descomposición en contenedores
+- **[ADRs](./docs/adr/)** - Decisiones arquitectónicas
+- **[Auditorías](./docs/auditorias/)** - Reportes de auditoría
+
+### Troubleshooting
+
+**"API key required"**
+```bash
+# Solución: Configurar DEEPSEEK_API_KEY
+export DEEPSEEK_API_KEY="tu-key"
+bk-agent
+```
+
+**"Project not found"**
+```bash
+# Solución: Usar /init o /switch
+/init
+# o
+/switch
+```
+
+**"Skill not loading"**
+```bash
+# Solución: Verificar triggers y formato YAML
+/skills
+# Editar ~/.deepseek-code/skills/*.yaml
+```
+
+**"Workspace error"**
+```bash
+# Solución: Ver estado
+/status
+/workspace list
+```
+
+---
+
+## 📄 Licencia
+
+MIT License - Vea [LICENSE](LICENSE) para detalles
+
+---
+
+**Última actualización:** Junio 2026  
+**Versión del agente:** 1.0.0  
+**Desarrollado por:** BackendKit Labs
+
+---
+
+## 📞 Contacto y Contribuciones
+
+- **Issues:** Reporte bugs y solicite features
+- **Discussions:** Pregunta por mejoras y diseño
+- **Pull Requests:** Contribuciones son bienvenidas
+
+Para más información sobre BackendKit Labs: https://github.com/backendkit-labs
