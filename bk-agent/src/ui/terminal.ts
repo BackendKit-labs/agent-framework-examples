@@ -7,6 +7,7 @@ import { PasteDebouncer } from './paste-debouncer';
 import { copyToClipboard } from './clipboard';
 import { saveToStash, loadStash } from './prompt-stash';
 import { WavesAnimation, AnimationType, AnimationConfig } from '@backendkit-labs/console-animations';
+import { getCompletionSuggestions } from '../commands/slash-registry';
 
 const sep = () => chalk.hex(theme.colors.border)('─'.repeat(process.stdout.columns || 80));
 const FOOTER = () =>
@@ -80,6 +81,8 @@ export class Terminal {
     private multilineAccumulator = '';
     /** Texto original del último paste pendiente de confirmación por Enter */
     private pendingPaste: string | null = null;
+    /** Info de estado persistente para el footer idle (modelo · agente · cwd) */
+    private footerInfo: string | (() => string) = '';
 
     constructor(opts: TerminalOptions) {
         this.messageBuffer = opts.messageBuffer ?? new MessageBuffer();
@@ -141,12 +144,22 @@ export class Terminal {
 
         const completer = opts.completions
             ? (line: string, callback: (err: Error | null, result: readline.CompleterResult) => void): void => {
-                // Slash commands
+                // Slash commands — mejorado con sugerencias inteligentes de subcomandos
                 if (line.startsWith('/')) {
+                    // Usar el registry mejorado para obtener sugerencias contextuales
+                    const suggestions = getCompletionSuggestions(line);
+
+                    if (suggestions.length > 0) {
+                        callback(null, [suggestions, line]);
+                        return;
+                    }
+
+                    // Fallback: sugerencias genéricas
                     const hits = (opts.completions ?? []).filter(c => c.startsWith(line));
                     callback(null, [hits.length ? hits : (opts.completions ?? []).filter(c => c.startsWith('/')), line]);
                     return;
                 }
+
                 // @ file autocomplete
                 const atMatch = line.match(/@(\S*)$/);
                 if (atMatch) {
@@ -676,8 +689,18 @@ export class Terminal {
     }
 
     /**
+     * @description Registra la info persistente que se muestra en el footer
+     * cuando el agente está idle (ej: "deepseek-chat · 🤖 General · /help").
+     * El texto debe ser plano (sin ANSI) — el footer lo colorea.
+     */
+    setFooterInfo(info: string | (() => string)): void {
+        this.footerInfo = info;
+    }
+
+    /**
      * @description Construye la línea de footer.
-     * Si hay texto de estado activo muestra "✽ texto ─────", si no "─────────".
+     * Con estado activo: "✽ texto ─────". Idle con info: "── info ──".
+     * Idle sin info: "─────────".
      */
     private buildFooter(): string {
         const cols = process.stdout.columns || 80;
@@ -687,6 +710,16 @@ export class Terminal {
             const icon = FOOTER_FRAMES[this.footerFrameIdx % FOOTER_FRAMES.length];
             return (
                 chalk.hex(theme.colors.info)(icon) + ' ' +
+                chalk.hex(theme.colors.textDim)(plain) + ' ' +
+                chalk.hex(theme.colors.border)('─'.repeat(fill))
+            );
+        }
+        const infoText = typeof this.footerInfo === 'function' ? this.footerInfo() : this.footerInfo;
+        if (infoText) {
+            const plain = infoText.slice(0, Math.max(0, cols - 8));
+            const fill = Math.max(1, cols - plain.length - 5);
+            return (
+                chalk.hex(theme.colors.border)('── ') +
                 chalk.hex(theme.colors.textDim)(plain) + ' ' +
                 chalk.hex(theme.colors.border)('─'.repeat(fill))
             );
