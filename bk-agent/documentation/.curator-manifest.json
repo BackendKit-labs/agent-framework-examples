@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "created": "2026-06-13T18:23:20.468Z",
+  "lastUpdated": "2026-06-13T18:28:45.835Z",
+  "inputPath": "C:\\Users\\mairon.cuello\\development\\workspace-ia\\agent-framework-examples\\bk-agent\\documentation",
+  "outputPath": "C:\\Users\\mairon.cuello\\development\\workspace-ia\\global-vaults\\bk-agent-vault",
+  "files": {
+    "00-index.md": {
+      "hash": "75c147598a3aa20625fce3c3c26496022eb85c5812ea4a8988f3473193f3b991",
+      "size": 4009,
+      "modified": "2026-06-13T15:46:39.662Z",
+      "curatedAt": "2026-06-13T18:28:45.798Z",
+      "status": "skipped"
+    },
+    "01-overview.md": {
+      "hash": "6de0c6a35ef1610d6bf5502b60ac2515647b1f3e01880be8fb1ba0b81160d4ff",
+      "size": 7237,
+      "modified": "2026-06-13T15:47:26.103Z",
+      "curatedAt": "2026-06-13T18:28:45.801Z",
+      "status": "skipped"
+    },
+    "02-installation-setup.md": {
+      "hash": "680284cba5740b37fe876964f3ae6c7a6baee5ce90f494539869fd72bcb88375",
+      "size": 6142,
+      "modified": "2026-06-13T15:47:47.325Z",
+      "curatedAt": "2026-06-13T18:28:45.803Z",
+      "status": "skipped"
+    },
+    "03-commands-slash.md": {
+      "hash": "9cbc723c28c7206c4b8c0e5a58b3a329627815489d5fbaad11824ad963f9f825",
+      "size": 9026,
+      "modified": "2026-06-13T15:48:32.284Z",
+      "curatedAt": "2026-06-13T18:28:45.806Z",
+      "status": "skipped"
+    },
+    "04-spec-driven-development.md": {
+      "hash": "3796976f8bcba477eab2fa2aceb9d1f44bae5a625e4768db99756fad0ddb2921",
+      "size": 11175,
+      "modified": "2026-06-13T15:49:07.410Z",
+      "curatedAt": "2026-06-13T18:28:45.808Z",
+      "status": "skipped"
+    },
+    "05-agents-specialization.md": {
+      "hash": "9658b470bee25084c0bb4f3e392e167a2821b1dfcff5a8ab2658293ef42cf619",
+      "size": 8830,
+      "modified": "2026-06-13T15:49:34.745Z",
+      "curatedAt": "2026-06-13T18:28:45.810Z",
+      "status": "skipped"
+    },
+    "06-skills-system.md": {
+      "hash": "94231d9f68372e037f6ba9b3714cbc7470a91ca5f836bd0cb484d979682414df",
+      "size": 10356,
+      "modified": "2026-06-13T15:50:04.839Z",
+      "curatedAt": "2026-06-13T18:28:45.813Z",
+      "status": "skipped"
+    },
+    "07-workspace-management.md": {
+      "hash": "ddabcda291e9cb73539849677947ea9809b357358ee90145e272f52acc5267bb",
+      "size": 8664,
+      "modified": "2026-06-13T15:50:32.735Z",
+      "curatedAt": "2026-06-13T18:28:45.816Z",
+      "status": "skipped"
+    },
+    "08-reflection-learning.md": {
+      "hash": "d32d65fb25e7aa9bf1b44bda1a0e2c3a499988d0a0c21fb3590617636a0090bd",
+      "size": 4655,
+      "modified": "2026-06-13T15:51:34.049Z",
+      "curatedAt": "2026-06-13T18:28:45.819Z",
+      "status": "skipped"
+    },
+    "09-memory-persistence.md": {
+      "hash": "b675a205aaaa3ed417c92bd34594b3227bdf5be3960e09e0b7c449fced712d64",
+      "size": 5335,
+      "modified": "2026-06-13T15:59:01.968Z",
+      "curatedAt": "2026-06-13T18:28:45.822Z",
+      "status": "skipped"
+    },
+    "10-backendkit-integration.md": {
+      "hash": "483087c7650944370375703df13ebc1a9ba1e0f1292469b062d3aaeb442e0086",
+      "size": 10378,
+      "modified": "2026-06-13T15:51:14.395Z",
+      "curatedAt": "2026-06-13T18:28:45.824Z",
+      "status": "skipped"
+    },
+    "11-plugins-mcp.md": {
+      "hash": "09f555020f91b27cd4d52112b8473e44acdf4f6e50e04d83ee3e73b91c8aad22",
+      "size": 4742,
+      "modified": "2026-06-13T15:59:58.409Z",
+      "curatedAt": "2026-06-13T18:28:45.826Z",
+      "status": "skipped"
+    },
+    "12-advanced-config.md": {
+      "hash": "cb4b6d061541eed9f7fc974ba303d3f085ec93c18e0c98fa6ae6be12bce53754",
+      "size": 4726,
+      "modified": "2026-06-13T15:59:23.989Z",
+      "curatedAt": "2026-06-13T18:28:45.828Z",
+      "status": "skipped"
+    },
+    "13-troubleshooting.md": {
+      "hash": "0324accaec14d191dac366ae5156d0b17dcc62b3cd773e20f5b7db42b909cf31",
+      "size": 5406,
+      "modified": "2026-06-13T15:59:42.247Z",
+      "curatedAt": "2026-06-13T18:28:45.831Z",
+      "status": "skipped"
+    },
+    "14-architecture.md": {
+      "hash": "166adbe57048f1f70e3ffe5847a2d1749be75ec039ecf4401d54123c64f6f59d",
+      "size": 8673,
+      "modified": "2026-06-13T16:00:24.221Z",
+      "curatedAt": "2026-06-13T18:28:45.833Z",
+      "status": "skipped"
+    },
+    "15-mcp-knowledge-service-strategy.md": {
+      "hash": "37876a51c2261f1bc6f907dc207059ff29074a4c3fcec70ae11ca6add9de1999",
+      "size": 13675,
+      "modified": "2026-06-13T16:29:10.671Z",
+      "curatedAt": "2026-06-13T18:28:45.835Z",
+      "status": "skipped"
+    }
+  }
+}

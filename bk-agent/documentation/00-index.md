@@ -22,9 +22,14 @@ Complete, modular documentation for the BackendKit Agent (bk-agent) — an AI co
 11. **[11-plugins-mcp.md](11-plugins-mcp.md)** — Creating plugins and MCP extensions
 12. **[12-advanced-config.md](12-advanced-config.md)** — Advanced configuration and tuning
 
+### Knowledge & Curation
+13. **[16-curator-codex-agent.md](16-curator-codex-agent.md)** — Code curation and knowledge management
+14. **[CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)** — Complete step-by-step guide with examples
+
 ### Reference
-13. **[13-troubleshooting.md](13-troubleshooting.md)** — Common issues and solutions
-14. **[14-architecture.md](14-architecture.md)** — Internal architecture and design
+15. **[13-troubleshooting.md](13-troubleshooting.md)** — Common issues and solutions
+16. **[14-architecture.md](14-architecture.md)** — Internal architecture and design
+17. **[15-mcp-knowledge-service-strategy.md](15-mcp-knowledge-service-strategy.md)** — MCP Knowledge Service architecture
 
 ---
 
@@ -40,6 +45,9 @@ Complete, modular documentation for the BackendKit Agent (bk-agent) — an AI co
 - **Fix something** → [13-troubleshooting.md](13-troubleshooting.md)
 - **Build a custom skill** → [06-skills-system.md](06-skills-system.md)
 - **Understand workspace** → [07-workspace-management.md](07-workspace-management.md)
+- **Curate code knowledge** → [16-curator-codex-agent.md](16-curator-codex-agent.md) then [CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)
+- **Create a code vault** → [16-curator-codex-agent.md](16-curator-codex-agent.md) → `curator_workspace_add` → `curator_process_directory`
+- **Search code knowledge** → [16-curator-codex-agent.md](16-curator-codex-agent.md) → `knowledge_search`
 
 ### By Role
 
@@ -64,6 +72,11 @@ Complete, modular documentation for the BackendKit Agent (bk-agent) — an AI co
 1. [06-skills-system.md](06-skills-system.md)
 2. [11-plugins-mcp.md](11-plugins-mcp.md)
 3. [14-architecture.md](14-architecture.md)
+
+**Knowledge Manager / Documentation**
+1. [16-curator-codex-agent.md](16-curator-codex-agent.md)
+2. [CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)
+3. [15-mcp-knowledge-service-strategy.md](15-mcp-knowledge-service-strategy.md)
 
 ---
 

@@ -13,12 +13,69 @@ Plugins add new:
 ## MCP Servers
 
 bk-agent integrates with **Model Context Protocol** servers for:
-- Git operations (via MCP git plugin)
+- Code curation and knowledge management
+- Git operations
 - External APIs
 - Custom tools
 - Knowledge sources
 
-### Configure MCP in Claude
+### Available MCP Servers in bk-agent
+
+#### **Curator-Codex Agent** ⭐ NEW
+Analyze code, generate knowledge notes, and perform semantic search.
+
+**Features:**
+- 11 MCP tools for curation and knowledge management
+- Workspace-based organization (vault per domain)
+- Semantic search with automatic synthesis
+- Works in bk-agent, Claude Desktop, OpenCode, etc.
+
+**Configure in bk-agent** (`.bk-agent/config.json`):
+```json
+{
+  "mcpServers": [
+    {
+      "name": "curator-codex",
+      "command": "node",
+      "args": ["path/to/curator-codex-agent/dist/server.js"],
+      "env": {
+        "CURATOR_API_KEY": "sk-your-key",
+        "CURATOR_PROVIDER": "deepseek",
+        "CURATOR_MODEL": "deepseek-reasoner"
+      }
+    }
+  ]
+}
+```
+
+**Available Commands:**
+- `curator_workspace_list` — List workspaces
+- `curator_workspace_switch` — Change workspace
+- `curator_process_directory` — Analyze code directory
+- `knowledge_search` — Search code knowledge semantically
+- See [16-curator-codex-agent.md](16-curator-codex-agent.md) for full list
+
+**Example Usage:**
+```bash
+# Curate a project
+curator_workspace_switch "backend"
+curator_process_directory "C:\my-backend"
+
+# Search knowledge
+knowledge_search "how to handle errors"
+```
+
+---
+
+#### **Docker Agent**
+Execute Docker commands and manage containers.
+
+#### **Design Agent**
+Generate architectural diagrams and design documentation.
+
+---
+
+### Configure MCP in Claude Desktop
 
 For `claude_desktop_config.json`:
 
@@ -29,17 +86,24 @@ For `claude_desktop_config.json`:
       "command": "npx",
       "args": ["-y", "@backendkit-labs/mcp-git-plugin"]
     },
-    "curator": {
-      "command": "npx",
-      "args": ["-y", "@backendkit-labs/curator-agent"],
+    "curator-codex": {
+      "command": "node",
+      "args": ["path/to/curator-codex-agent/dist/server.js"],
       "env": {
-        "CURATOR_VAULT_PATH": "/path/to/vault",
-        "CURATOR_API_KEY": "sk-..."
+        "CURATOR_API_KEY": "sk-...",
+        "CURATOR_PROVIDER": "deepseek",
+        "CURATOR_MODEL": "deepseek-reasoner"
       }
     }
   }
 }
 ```
+
+**Note:** Curator-Codex works agnóstically via stdio transport, so it can be used in:
+- bk-agent
+- Claude Desktop
+- OpenCode
+- Any MCP-compatible client
 
 ## Creating Custom Plugins
 
