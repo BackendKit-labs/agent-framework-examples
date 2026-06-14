@@ -24,7 +24,8 @@ Complete, modular documentation for the BackendKit Agent (bk-agent) — an AI co
 
 ### Knowledge & Curation
 13. **[16-curator-codex-agent.md](16-curator-codex-agent.md)** — Code curation and knowledge management
-14. **[CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)** — Complete step-by-step guide with examples
+14. **[17-curator-codex-quick-reference.md](17-curator-codex-quick-reference.md)** — Quick reference and workflow examples
+15. **[CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)** — Complete step-by-step guide with examples
 
 ### Reference
 15. **[13-troubleshooting.md](13-troubleshooting.md)** — Common issues and solutions
