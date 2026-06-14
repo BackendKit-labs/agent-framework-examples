@@ -23,14 +23,15 @@ Complete, modular documentation for the BackendKit Agent (bk-agent) — an AI co
 12. **[12-advanced-config.md](12-advanced-config.md)** — Advanced configuration and tuning
 
 ### Knowledge & Curation
-13. **[16-curator-codex-agent.md](16-curator-codex-agent.md)** — Code curation and knowledge management
+13. **[16-curator-codex-agent.md](16-curator-codex-agent.md)** — Code curation and knowledge management (overview)
 14. **[17-curator-codex-quick-reference.md](17-curator-codex-quick-reference.md)** — Quick reference and workflow examples
-15. **[CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)** — Complete step-by-step guide with examples
+15. **[18-curator-codex-commands-reference.md](18-curator-codex-commands-reference.md)** — Commands quick reference (11 commands summary)
+16. **[CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)** — Complete step-by-step guide with examples
 
 ### Reference
-15. **[13-troubleshooting.md](13-troubleshooting.md)** — Common issues and solutions
-16. **[14-architecture.md](14-architecture.md)** — Internal architecture and design
-17. **[15-mcp-knowledge-service-strategy.md](15-mcp-knowledge-service-strategy.md)** — MCP Knowledge Service architecture
+17. **[13-troubleshooting.md](13-troubleshooting.md)** — Common issues and solutions
+18. **[14-architecture.md](14-architecture.md)** — Internal architecture and design
+19. **[15-mcp-knowledge-service-strategy.md](15-mcp-knowledge-service-strategy.md)** — MCP Knowledge Service architecture
 
 ---
 
@@ -46,7 +47,7 @@ Complete, modular documentation for the BackendKit Agent (bk-agent) — an AI co
 - **Fix something** → [13-troubleshooting.md](13-troubleshooting.md)
 - **Build a custom skill** → [06-skills-system.md](06-skills-system.md)
 - **Understand workspace** → [07-workspace-management.md](07-workspace-management.md)
-- **Curate code knowledge** → [16-curator-codex-agent.md](16-curator-codex-agent.md) then [CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)
+- **Curate code knowledge** → [16-curator-codex-agent.md](16-curator-codex-agent.md) → [18-curator-codex-commands-reference.md](18-curator-codex-commands-reference.md) (quick) or [CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md) (detailed)
 - **Create a code vault** → [16-curator-codex-agent.md](16-curator-codex-agent.md) → `curator_workspace_add` → `curator_process_directory`
 - **Search code knowledge** → [16-curator-codex-agent.md](16-curator-codex-agent.md) → `knowledge_search`
 
@@ -76,8 +77,9 @@ Complete, modular documentation for the BackendKit Agent (bk-agent) — an AI co
 
 **Knowledge Manager / Documentation**
 1. [16-curator-codex-agent.md](16-curator-codex-agent.md)
-2. [CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md)
-3. [15-mcp-knowledge-service-strategy.md](15-mcp-knowledge-service-strategy.md)
+2. [18-curator-codex-commands-reference.md](18-curator-codex-commands-reference.md) (quick reference)
+3. [CURATOR-CODEX-COMMANDS.md](CURATOR-CODEX-COMMANDS.md) (detailed guide)
+4. [15-mcp-knowledge-service-strategy.md](15-mcp-knowledge-service-strategy.md)
 
 ---
 
